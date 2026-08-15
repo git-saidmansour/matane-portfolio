@@ -10,6 +10,8 @@ const {
   title = 'Matane Mansour — Développeur & Data/Cyber',
   description = 'Portfolio de Matane Mansour, développeur et étudiant en cybersécurité et data. Projets, compétences et contact.',
 } = Astro.props;
+
+const ogImage = new URL('/images/og-image.jpg', Astro.site);
 ---
 
 <!doctype html>
@@ -26,10 +28,15 @@ const {
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={Astro.site} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Matane Mansour" />
 
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
   </head>
   <body>
     <slot />
