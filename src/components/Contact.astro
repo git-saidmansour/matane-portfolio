@@ -1,8 +1,12 @@
 ---
-const email = 'contact@matane-mansour.com';
+const email = 'mansour50said@gmail.com';
 const socials = [
-  { label: 'GitHub', href: 'https://github.com/ton-utilisateur' },
-  { label: 'LinkedIn', href: 'https://linkedin.com/in/ton-utilisateur' },
+  { label: 'GitHub', href: 'https://github.com/git-saidmansour' },
+  { label: 'LinkedIn', href: 'https://linkedin.com/in/in-saidmansour' },
+];
+const cvs = [
+  { label: 'CV — Réseaux & Cybersécurité', href: '/cv/matane-mansour-cv-reseaux-cybersecurite.pdf' },
+  { label: 'CV — Data & IA', href: '/cv/matane-mansour-cv-data-ia.pdf' },
 ];
 ---
 
@@ -10,8 +14,8 @@ const socials = [
   <p class="section-title">Contact</p>
   <h2 class="heading">Discutons</h2>
   <p class="mt-4 max-w-2xl text-slate-400">
-    Ouvert aux opportunités de stage, alternance ou collaboration sur des
-    projets. N'hésite pas à me contacter.
+    Ouvert à une alternance de 24 mois à partir de septembre 2026, ou à
+    toute collaboration sur des projets. N'hésite pas à me contacter.
   </p>
 
   <div class="mt-8 flex flex-wrap items-center gap-4">
@@ -19,6 +23,14 @@ const socials = [
     {socials.map((social) => (
       <a href={social.href} target="_blank" rel="noopener noreferrer" class="btn">
         {social.label}
+      </a>
+    ))}
+  </div>
+
+  <div class="mt-6 flex flex-wrap items-center gap-4">
+    {cvs.map((cv) => (
+      <a href={cv.href} download class="font-mono text-sm text-accent hover:underline">
+        &darr; {cv.label}
       </a>
     ))}
   </div>

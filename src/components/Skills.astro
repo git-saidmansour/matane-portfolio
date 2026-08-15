@@ -1,16 +1,20 @@
 ---
 const skillGroups = [
   {
-    title: 'Développement',
-    skills: ['Python', 'JavaScript / TypeScript', 'SQL', 'Git'],
+    title: 'Systèmes & Réseaux',
+    skills: ['Linux', 'Windows Server', 'TCP/IP', 'Cisco (routeurs, switches, VLAN)', 'DNS / DHCP / LDAP / VPN', 'pfSense'],
   },
   {
     title: 'Cybersécurité',
-    skills: ['Réseaux', 'Linux', 'Pentest de base', 'Analyse de vulnérabilités'],
+    skills: ['ISO 27001 · RGPD · ANSSI', 'Trivy · DevSecOps', 'IDS/IPS (Suricata)', 'Burp Suite · Kali', 'Bug bounty (YesWeHack)'],
   },
   {
-    title: 'Data',
-    skills: ['Pandas', 'Analyse de données', 'Visualisation', 'Bases de données'],
+    title: 'Data & IA',
+    skills: ['Python · Pandas · PySpark', 'Scikit-learn · MLflow', 'LangChain · RAG · ChromaDB', 'Power BI · Streamlit · Dataiku', 'SQL'],
+  },
+  {
+    title: 'DevOps & Cloud',
+    skills: ['Docker · GitHub Actions · CI/CD', 'Nginx · Bash', 'Azure · AWS', 'Zabbix · Wireshark · Nmap'],
   },
 ];
 ---
@@ -19,7 +23,7 @@ const skillGroups = [
   <p class="section-title">Compétences</p>
   <h2 class="heading">Ma boîte à outils</h2>
 
-  <div class="mt-10 grid gap-6 sm:grid-cols-3">
+  <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
     {skillGroups.map((group) => (
       <div class="card">
         <h3 class="font-mono text-sm uppercase tracking-wide text-accent2">
