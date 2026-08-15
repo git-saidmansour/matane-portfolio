@@ -1,0 +1,39 @@
+---
+const skillGroups = [
+  {
+    title: 'Développement',
+    skills: ['Python', 'JavaScript / TypeScript', 'SQL', 'Git'],
+  },
+  {
+    title: 'Cybersécurité',
+    skills: ['Réseaux', 'Linux', 'Pentest de base', 'Analyse de vulnérabilités'],
+  },
+  {
+    title: 'Data',
+    skills: ['Pandas', 'Analyse de données', 'Visualisation', 'Bases de données'],
+  },
+];
+---
+
+<section id="skills" class="section scroll-mt-24">
+  <p class="section-title">Compétences</p>
+  <h2 class="heading">Ma boîte à outils</h2>
+
+  <div class="mt-10 grid gap-6 sm:grid-cols-3">
+    {skillGroups.map((group) => (
+      <div class="card">
+        <h3 class="font-mono text-sm uppercase tracking-wide text-accent2">
+          {group.title}
+        </h3>
+        <ul class="mt-4 space-y-2 text-sm text-slate-300">
+          {group.skills.map((skill) => (
+            <li class="flex items-center gap-2">
+              <span class="h-1.5 w-1.5 rounded-full bg-accent"></span>
+              {skill}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+</section>

@@ -1,0 +1,7 @@
+services:
+  portfolio:
+    image: ghcr.io/git-saidmansour/matane-portfolio:latest
+    container_name: matane-portfolio
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"

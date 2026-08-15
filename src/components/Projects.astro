@@ -1,0 +1,46 @@
+---
+import { getCollection } from 'astro:content';
+
+const allProjects = (await getCollection('projects')).sort(
+  (a, b) => a.data.order - b.data.order
+);
+---
+
+<section id="projects" class="section scroll-mt-24">
+  <p class="section-title">Projets</p>
+  <h2 class="heading">Ce que j'ai construit</h2>
+
+  <div class="mt-10 grid gap-6 sm:grid-cols-2">
+    {allProjects.map((project) => (
+      <article class="card flex flex-col">
+        <h3 class="text-lg font-semibold text-white">{project.data.title}</h3>
+        <p class="mt-2 flex-1 text-sm text-slate-400">{project.data.description}</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          {project.data.tags.map((tag) => <span class="tag">{tag}</span>)}
+        </div>
+        <div class="mt-5 flex gap-4">
+          {project.data.repoUrl && (
+            <a
+              href={project.data.repoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-mono text-sm text-accent hover:underline"
+            >
+              Code &rarr;
+            </a>
+          )}
+          {project.data.liveUrl && (
+            <a
+              href={project.data.liveUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-mono text-sm text-accent2 hover:underline"
+            >
+              Démo &rarr;
+            </a>
+          )}
+        </div>
+      </article>
+    ))}
+  </div>
+</section>

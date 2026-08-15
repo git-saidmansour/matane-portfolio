@@ -1,0 +1,25 @@
+---
+const email = 'contact@matane-mansour.com';
+const socials = [
+  { label: 'GitHub', href: 'https://github.com/ton-utilisateur' },
+  { label: 'LinkedIn', href: 'https://linkedin.com/in/ton-utilisateur' },
+];
+---
+
+<section id="contact" class="section scroll-mt-24">
+  <p class="section-title">Contact</p>
+  <h2 class="heading">Discutons</h2>
+  <p class="mt-4 max-w-2xl text-slate-400">
+    Ouvert aux opportunités de stage, alternance ou collaboration sur des
+    projets. N'hésite pas à me contacter.
+  </p>
+
+  <div class="mt-8 flex flex-wrap items-center gap-4">
+    <a href={`mailto:${email}`} class="btn-primary">{email}</a>
+    {socials.map((social) => (
+      <a href={social.href} target="_blank" rel="noopener noreferrer" class="btn">
+        {social.label}
+      </a>
+    ))}
+  </div>
+</section>
