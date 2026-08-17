@@ -1,0 +1,45 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getStats } from '../../lib/db';
+
+const stats = getStats();
+
+const cvLabels: Record<string, string> = {
+  'reseaux-cybersecurite': 'CV Réseaux & Cybersécurité',
+  'data-ia': 'CV Data & IA',
+};
+---
+
+<AdminLayout title="Vue d'ensemble">
+  <div class="grid gap-4 sm:grid-cols-3">
+    <div class="card">
+      <p class="font-mono text-xs uppercase tracking-wide text-accent">Visites du site</p>
+      <p class="mt-2 text-3xl font-bold text-white">{stats.pageViews}</p>
+    </div>
+    <div class="card">
+      <p class="font-mono text-xs uppercase tracking-wide text-accent2">Téléchargements CV</p>
+      <p class="mt-2 text-3xl font-bold text-white">{stats.totalCvDownloads}</p>
+    </div>
+    <div class="card">
+      <p class="font-mono text-xs uppercase tracking-wide text-slate-400">Projets</p>
+      <p class="mt-2 text-3xl font-bold text-white">{stats.projectCount}</p>
+    </div>
+  </div>
+
+  <div class="card mt-6">
+    <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">
+      Téléchargements par CV
+    </h2>
+    <ul class="mt-4 space-y-2 text-sm">
+      {stats.cvDownloadsByType.length === 0 && (
+        <li class="text-slate-500">Aucun téléchargement pour l'instant.</li>
+      )}
+      {stats.cvDownloadsByType.map((row) => (
+        <li class="flex items-center justify-between text-slate-300">
+          <span>{cvLabels[row.meta] ?? row.meta}</span>
+          <span class="font-mono text-white">{row.n}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+</AdminLayout>

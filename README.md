@@ -1,35 +1,44 @@
 # matane-portfolio
 
-Portfolio personnel de Matane Mansour — Astro + Tailwind CSS, déployé en
-Docker sur un VPS Contabo via GitHub Actions.
+Portfolio personnel de Matane Mansour — Astro (SSR) + Tailwind CSS + SQLite,
+déployé en Docker sur un VPS Contabo via GitHub Actions.
 
 ## Développement
 
 ```bash
 npm install
-npm run dev
+DATA_DIR=.data SESSION_SECRET=dev-secret npm run dev
+```
+
+Pour tester le dashboard admin en local, génère un hash et passe-le en env :
+
+```bash
+node scripts/hash-password.mjs "motdepasse"
+DATA_DIR=.data SESSION_SECRET=dev-secret ADMIN_PASSWORD_HASH=<hash> npm run dev
 ```
 
 ## Build
 
 ```bash
 npm run build
-npm run preview
+node ./dist/server/entry.mjs
 ```
 
 ## Contenu
 
-Les projets affichés dans la section "Projets" sont des fichiers Markdown
-dans `src/content/projects/`. Modifie-les ou ajoute-en de nouveaux en
-suivant le schéma défini dans `src/content/config.ts`.
+Le contenu (projets, bio, photo) est géré via le dashboard admin sur
+`/admin`, protégé par mot de passe (voir `ADMIN_PASSWORD_HASH` /
+`SESSION_SECRET` en variables d'environnement). Tout est stocké dans
+SQLite (`data/db.sqlite`) et les fichiers uploadés dans `data/uploads/` —
+ce dossier est monté en volume Docker et persiste entre les déploiements.
 
-Le texte de la bio (`src/components/About.astro`), les liens de contact
-(`src/components/Contact.astro`) et les compétences
-(`src/components/Skills.astro`) sont actuellement des placeholders à
-remplacer.
+Les compétences (`src/components/Skills.astro`) restent codées en dur
+(non éditables depuis le dashboard).
 
 ## Déploiement
 
 Voir [docs/VPS_SETUP.md](docs/VPS_SETUP.md) pour la configuration du VPS
-Contabo (Docker, Nginx, HTTPS, secrets GitHub Actions). Une fois configuré,
-chaque push sur `main` déclenche automatiquement le déploiement.
+Contabo (Docker, Nginx, HTTPS, secrets GitHub Actions, variables du
+dashboard admin). Une fois configuré, chaque push sur `main` déclenche
+automatiquement le déploiement ; les données du dashboard (projets, bio,
+photo, statistiques) survivent aux redéploiements grâce au volume Docker.

@@ -7,14 +7,25 @@ import Projects from '../components/Projects.astro';
 import Skills from '../components/Skills.astro';
 import Contact from '../components/Contact.astro';
 import Footer from '../components/Footer.astro';
+import { getProfile, getProjects } from '../lib/db';
+
+const profile = getProfile();
+const projects = getProjects();
 ---
 
 <Layout>
   <Header />
   <main>
-    <Hero />
-    <About />
-    <Projects />
+    <Hero photoPath={profile.photo_path} />
+    <About
+      bio1={profile.bio_1}
+      bio2={profile.bio_2}
+      location={profile.location}
+      formation={profile.formation}
+      availability={profile.availability}
+      languages={profile.languages}
+    />
+    <Projects projects={projects} />
     <Skills />
     <Contact />
   </main>

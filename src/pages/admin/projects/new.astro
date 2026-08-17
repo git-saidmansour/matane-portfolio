@@ -1,0 +1,40 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import ProjectForm from '../../../components/admin/ProjectForm.astro';
+import { createProject, type ProjectInput } from '../../../lib/db';
+
+let error = '';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const data: ProjectInput = {
+    slug: String(form.get('slug') || '').trim(),
+    title: String(form.get('title') || '').trim(),
+    description: String(form.get('description') || '').trim(),
+    tags: String(form.get('tags') || '')
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean),
+    repo_url: String(form.get('repo_url') || '').trim() || null,
+    live_url: String(form.get('live_url') || '').trim() || null,
+    featured: form.get('featured') === 'on',
+    order_num: Number(form.get('order_num')) || 0,
+  };
+
+  if (!data.slug || !data.title || !data.description) {
+    error = 'Titre, slug et description sont obligatoires.';
+  } else {
+    try {
+      createProject(data);
+      return Astro.redirect('/admin/projects');
+    } catch (e) {
+      error = 'Ce slug existe déjà, choisis-en un autre.';
+    }
+  }
+}
+---
+
+<AdminLayout title="Nouveau projet">
+  {error && <p class="mb-4 rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>}
+  <ProjectForm action="/admin/projects/new" />
+</AdminLayout>

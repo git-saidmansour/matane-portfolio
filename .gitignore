@@ -2,6 +2,10 @@
 dist/
 .astro/
 
+# local database / uploads (dev + persisted volume)
+data/
+.data/
+
 # dependencies
 node_modules/
 

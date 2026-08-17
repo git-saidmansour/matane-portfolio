@@ -1,0 +1,102 @@
+---
+import type { Project } from '../../lib/db';
+
+interface Props {
+  action: string;
+  project?: Project;
+}
+
+const { action, project } = Astro.props;
+---
+
+<form method="POST" action={action} class="flex max-w-2xl flex-col gap-5">
+  <label class="block text-sm text-slate-400">
+    Titre
+    <input
+      type="text"
+      name="title"
+      required
+      value={project?.title}
+      class="mt-2 w-full rounded-md border border-white/10 bg-surface px-3 py-2 text-white outline-none focus:border-accent"
+    />
+  </label>
+
+  <label class="block text-sm text-slate-400">
+    Slug (identifiant unique, ex: mon-projet)
+    <input
+      type="text"
+      name="slug"
+      required
+      pattern="[a-z0-9\-]+"
+      value={project?.slug}
+      class="mt-2 w-full rounded-md border border-white/10 bg-surface px-3 py-2 text-white outline-none focus:border-accent"
+    />
+  </label>
+
+  <label class="block text-sm text-slate-400">
+    Description
+    <textarea
+      name="description"
+      required
+      rows="4"
+      class="mt-2 w-full rounded-md border border-white/10 bg-surface px-3 py-2 text-white outline-none focus:border-accent"
+    >{project?.description}</textarea>
+  </label>
+
+  <label class="block text-sm text-slate-400">
+    Tags (séparés par des virgules)
+    <input
+      type="text"
+      name="tags"
+      value={project?.tags.join(', ')}
+      placeholder="Node.js, Docker, CI/CD"
+      class="mt-2 w-full rounded-md border border-white/10 bg-surface px-3 py-2 text-white outline-none focus:border-accent"
+    />
+  </label>
+
+  <label class="block text-sm text-slate-400">
+    Lien vers le code (optionnel)
+    <input
+      type="url"
+      name="repo_url"
+      value={project?.repo_url ?? ''}
+      class="mt-2 w-full rounded-md border border-white/10 bg-surface px-3 py-2 text-white outline-none focus:border-accent"
+    />
+  </label>
+
+  <label class="block text-sm text-slate-400">
+    Lien vers la démo/le site (optionnel)
+    <input
+      type="url"
+      name="live_url"
+      value={project?.live_url ?? ''}
+      class="mt-2 w-full rounded-md border border-white/10 bg-surface px-3 py-2 text-white outline-none focus:border-accent"
+    />
+  </label>
+
+  <div class="flex items-center gap-6">
+    <label class="flex items-center gap-2 text-sm text-slate-400">
+      <input
+        type="checkbox"
+        name="featured"
+        checked={project?.featured}
+        class="h-4 w-4 rounded border-white/10 bg-surface accent-accent"
+      />
+      Mis en avant
+    </label>
+    <label class="flex items-center gap-2 text-sm text-slate-400">
+      Ordre d'affichage
+      <input
+        type="number"
+        name="order_num"
+        value={project?.order_num ?? 0}
+        class="w-20 rounded-md border border-white/10 bg-surface px-3 py-2 text-white outline-none focus:border-accent"
+      />
+    </label>
+  </div>
+
+  <div class="flex gap-4">
+    <button type="submit" class="btn-primary">Enregistrer</button>
+    <a href="/admin/projects" class="btn">Annuler</a>
+  </div>
+</form>

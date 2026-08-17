@@ -152,3 +152,49 @@ Dans le repo GitHub → Settings → Secrets and variables → Actions, ajoute :
 Fais ensuite un push sur `main` : le workflow `.github/workflows/deploy.yml`
 build l'image, la pousse sur ghcr.io, puis se connecte en SSH au VPS pour
 relancer le conteneur.
+
+## 10. Dashboard admin — mot de passe et variables d'environnement
+
+Depuis l'ajout du dashboard (`/admin`), le site est dynamique (SSR + SQLite)
+et a besoin de deux secrets **uniquement présents sur le VPS**, jamais dans
+le repo : le hash du mot de passe admin, et une clé de signature de session.
+
+Génère le hash de ton mot de passe **en local** (le mot de passe en clair
+ne part jamais sur le réseau) :
+
+```bash
+node scripts/hash-password.mjs "ton-mot-de-passe-ici"
+```
+
+Génère une clé de session aléatoire :
+
+```bash
+openssl rand -hex 32
+```
+
+Sur le VPS, dans `~/matane-portfolio/`, crée le fichier `.env` (jamais commité) :
+
+```bash
+cat > ~/matane-portfolio/.env << 'EOF'
+ADMIN_PASSWORD_HASH=colle_ici_le_hash_genere
+SESSION_SECRET=colle_ici_la_cle_generee
+EOF
+chmod 600 ~/matane-portfolio/.env
+```
+
+Crée aussi le dossier persistant pour la base de données et les fichiers
+uploadés (photo, etc.) — il est monté en volume Docker et survit aux
+redéploiements :
+
+```bash
+mkdir -p ~/matane-portfolio/data/uploads
+```
+
+Relance le conteneur pour prendre en compte le `.env` :
+
+```bash
+cd ~/matane-portfolio
+docker compose up -d
+```
+
+Le dashboard est accessible sur `https://matane-mansour.com/admin`.

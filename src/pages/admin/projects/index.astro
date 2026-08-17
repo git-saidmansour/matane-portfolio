@@ -1,0 +1,42 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getProjects } from '../../../lib/db';
+
+const projects = getProjects();
+---
+
+<AdminLayout title="Projets">
+  <div class="flex items-center justify-between">
+    <p class="text-sm text-slate-400">{projects.length} projet(s)</p>
+    <a href="/admin/projects/new" class="btn-primary text-sm">+ Nouveau projet</a>
+  </div>
+
+  <div class="mt-6 flex flex-col gap-3">
+    {projects.map((project) => (
+      <div class="card flex items-center justify-between gap-4">
+        <div>
+          <p class="font-semibold text-white">
+            {project.title}
+            {project.featured && <span class="tag ml-2">mis en avant</span>}
+          </p>
+          <p class="mt-1 text-sm text-slate-400">{project.description}</p>
+        </div>
+        <div class="flex shrink-0 gap-3">
+          <a href={`/admin/projects/${project.id}/edit`} class="btn text-sm">Modifier</a>
+          <form
+            method="POST"
+            action={`/admin/projects/${project.id}/delete`}
+            onsubmit="return confirm('Supprimer ce projet ?')"
+          >
+            <button
+              type="submit"
+              class="rounded-md border border-red-500/30 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
+            >
+              Supprimer
+            </button>
+          </form>
+        </div>
+      </div>
+    ))}
+  </div>
+</AdminLayout>

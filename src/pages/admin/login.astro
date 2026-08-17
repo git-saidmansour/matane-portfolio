@@ -1,0 +1,73 @@
+---
+import '../../styles/global.css';
+import {
+  verifyPassword,
+  createSessionCookieValue,
+  SESSION_COOKIE,
+  SESSION_TTL_MS,
+  isRateLimited,
+  recordLoginFailure,
+  clearLoginFailures,
+} from '../../lib/auth';
+
+function getClientIp(request: Request): string {
+  return request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
+}
+
+let error = '';
+const ip = getClientIp(Astro.request);
+
+if (Astro.request.method === 'POST') {
+  if (isRateLimited(ip)) {
+    error = 'Trop de tentatives. Réessaie dans quelques minutes.';
+  } else {
+    const form = await Astro.request.formData();
+    const password = String(form.get('password') || '');
+    const expectedHash = process.env.ADMIN_PASSWORD_HASH || '';
+
+    if (expectedHash && verifyPassword(password, expectedHash)) {
+      clearLoginFailures(ip);
+      Astro.cookies.set(SESSION_COOKIE, createSessionCookieValue(), {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        path: '/',
+        maxAge: SESSION_TTL_MS / 1000,
+      });
+      return Astro.redirect('/admin');
+    } else {
+      recordLoginFailure(ip);
+      error = 'Mot de passe incorrect.';
+    }
+  }
+}
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Connexion — Admin</title>
+  </head>
+  <body class="flex min-h-screen items-center justify-center bg-bg text-slate-200">
+    <form method="POST" class="w-full max-w-sm rounded-lg border border-white/10 bg-surface p-8">
+      <p class="font-mono text-sm text-accent">matane@admin:~$</p>
+      <h1 class="mt-2 text-xl font-bold text-white">Connexion</h1>
+      {error && <p class="mt-4 rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>}
+      <label class="mt-6 block text-sm text-slate-400">
+        Mot de passe
+        <input
+          type="password"
+          name="password"
+          required
+          autofocus
+          class="mt-2 w-full rounded-md border border-white/10 bg-bg px-3 py-2 text-white outline-none focus:border-accent"
+        />
+      </label>
+      <button type="submit" class="btn-primary mt-6 w-full justify-center">Se connecter</button>
+    </form>
+  </body>
+</html>

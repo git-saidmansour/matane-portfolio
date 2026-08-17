@@ -5,3 +5,5 @@ dist
 .github
 docs
 *.md
+data
+.data

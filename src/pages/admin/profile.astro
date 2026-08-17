@@ -1,0 +1,134 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getProfile, updateProfile } from '../../lib/db';
+import sharp from 'sharp';
+import path from 'node:path';
+
+const DATA_DIR = process.env.DATA_DIR || './data';
+const MAX_PHOTO_SIZE = 8 * 1024 * 1024; // 8MB
+
+let error = '';
+let success = false;
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const updates: Record<string, string> = {
+    bio_1: String(form.get('bio_1') || '').trim(),
+    bio_2: String(form.get('bio_2') || '').trim(),
+    location: String(form.get('location') || '').trim(),
+    formation: String(form.get('formation') || '').trim(),
+    availability: String(form.get('availability') || '').trim(),
+    languages: String(form.get('languages') || '').trim(),
+  };
+
+  const photo = form.get('photo');
+  if (photo instanceof File && photo.size > 0) {
+    if (!photo.type.startsWith('image/')) {
+      error = "Le fichier envoyé n'est pas une image.";
+    } else if (photo.size > MAX_PHOTO_SIZE) {
+      error = 'Image trop volumineuse (8 Mo max).';
+    } else {
+      try {
+        const buffer = Buffer.from(await photo.arrayBuffer());
+        const filename = `portrait-${Date.now()}.webp`;
+        const outPath = path.join(DATA_DIR, 'uploads', filename);
+        await sharp(buffer).resize(640, 640, { fit: 'cover' }).webp({ quality: 85 }).toFile(outPath);
+        updates.photo_path = `/uploads/${filename}`;
+      } catch {
+        error = "Impossible de traiter cette image.";
+      }
+    }
+  }
+
+  if (!error) {
+    updateProfile(updates);
+    success = true;
+  }
+}
+
+const profile = getProfile();
+---
+
+<AdminLayout title="Profil">
+  {error && <p class="mb-4 rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>}
+  {success && <p class="mb-4 rounded-md bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">Profil mis à jour.</p>}
+
+  <form method="POST" enctype="multipart/form-data" class="flex max-w-2xl flex-col gap-5">
+    <div class="flex items-center gap-4">
+      <img
+        src={profile.photo_path}
+        alt="Photo actuelle"
+        class="h-20 w-20 rounded-full border border-white/10 object-cover"
+      />
+      <label class="block text-sm text-slate-400">
+        Nouvelle photo (optionnel)
+        <input
+          type="file"
+          name="photo"
+          accept="image/*"
+          class="mt-2 block text-sm text-slate-400 file:mr-4 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-slate-200"
+        />
+      </label>
+    </div>
+
+    <label class="block text-sm text-slate-400">
+      Bio — paragraphe 1
+      <textarea
+        name="bio_1"
+        rows="4"
+        class="mt-2 w-full rounded-md border border-white/10 bg-surface px-3 py-2 text-white outline-none focus:border-accent"
+      >{profile.bio_1}</textarea>
+    </label>
+
+    <label class="block text-sm text-slate-400">
+      Bio — paragraphe 2
+      <textarea
+        name="bio_2"
+        rows="4"
+        class="mt-2 w-full rounded-md border border-white/10 bg-surface px-3 py-2 text-white outline-none focus:border-accent"
+      >{profile.bio_2}</textarea>
+    </label>
+
+    <label class="block text-sm text-slate-400">
+      Localisation
+      <input
+        type="text"
+        name="location"
+        value={profile.location}
+        class="mt-2 w-full rounded-md border border-white/10 bg-surface px-3 py-2 text-white outline-none focus:border-accent"
+      />
+    </label>
+
+    <label class="block text-sm text-slate-400">
+      Formation
+      <input
+        type="text"
+        name="formation"
+        value={profile.formation}
+        class="mt-2 w-full rounded-md border border-white/10 bg-surface px-3 py-2 text-white outline-none focus:border-accent"
+      />
+    </label>
+
+    <label class="block text-sm text-slate-400">
+      Disponibilité
+      <input
+        type="text"
+        name="availability"
+        value={profile.availability}
+        class="mt-2 w-full rounded-md border border-white/10 bg-surface px-3 py-2 text-white outline-none focus:border-accent"
+      />
+    </label>
+
+    <label class="block text-sm text-slate-400">
+      Langues
+      <input
+        type="text"
+        name="languages"
+        value={profile.languages}
+        class="mt-2 w-full rounded-md border border-white/10 bg-surface px-3 py-2 text-white outline-none focus:border-accent"
+      />
+    </label>
+
+    <button type="submit" class="btn-primary w-fit">Enregistrer</button>
+  </form>
+</AdminLayout>

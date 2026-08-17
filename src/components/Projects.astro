@@ -1,9 +1,11 @@
 ---
-import { getCollection } from 'astro:content';
+import type { Project } from '../lib/db';
 
-const allProjects = (await getCollection('projects')).sort(
-  (a, b) => a.data.order - b.data.order
-);
+interface Props {
+  projects: Project[];
+}
+
+const { projects } = Astro.props;
 ---
 
 <section id="projects" class="section scroll-mt-24">
@@ -11,17 +13,17 @@ const allProjects = (await getCollection('projects')).sort(
   <h2 class="heading">Ce que j'ai construit</h2>
 
   <div class="mt-10 grid gap-6 sm:grid-cols-2">
-    {allProjects.map((project) => (
+    {projects.map((project) => (
       <article class="card flex flex-col">
-        <h3 class="text-lg font-semibold text-white">{project.data.title}</h3>
-        <p class="mt-2 flex-1 text-sm text-slate-400">{project.data.description}</p>
+        <h3 class="text-lg font-semibold text-white">{project.title}</h3>
+        <p class="mt-2 flex-1 text-sm text-slate-400">{project.description}</p>
         <div class="mt-4 flex flex-wrap gap-2">
-          {project.data.tags.map((tag) => <span class="tag">{tag}</span>)}
+          {project.tags.map((tag) => <span class="tag">{tag}</span>)}
         </div>
         <div class="mt-5 flex gap-4">
-          {project.data.repoUrl && (
+          {project.repo_url && (
             <a
-              href={project.data.repoUrl}
+              href={project.repo_url}
               target="_blank"
               rel="noopener noreferrer"
               class="font-mono text-sm text-accent hover:underline"
@@ -29,9 +31,9 @@ const allProjects = (await getCollection('projects')).sort(
               Code &rarr;
             </a>
           )}
-          {project.data.liveUrl && (
+          {project.live_url && (
             <a
-              href={project.data.liveUrl}
+              href={project.live_url}
               target="_blank"
               rel="noopener noreferrer"
               class="font-mono text-sm text-accent2 hover:underline"
