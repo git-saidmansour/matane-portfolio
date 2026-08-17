@@ -1,0 +1,107 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getCvs, createCv, getCvBySlug } from '../../../lib/db';
+import { writeFile } from 'node:fs/promises';
+import path from 'node:path';
+
+const DATA_DIR = process.env.DATA_DIR || './data';
+const MAX_CV_SIZE = 20 * 1024 * 1024; // 20MB
+
+function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+let error = '';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const label = String(form.get('label') || '').trim();
+  const file = form.get('file');
+
+  if (!label) {
+    error = 'Le libellé est obligatoire.';
+  } else if (!(file instanceof File) || file.size === 0) {
+    error = 'Choisis un fichier PDF.';
+  } else if (file.type !== 'application/pdf') {
+    error = 'Le fichier doit être un PDF.';
+  } else if (file.size > MAX_CV_SIZE) {
+    error = 'Fichier trop volumineux (20 Mo max).';
+  } else {
+    let slug = slugify(label);
+    if (!slug) slug = `cv-${Date.now()}`;
+    if (getCvBySlug(slug)) slug = `${slug}-${Date.now()}`;
+
+    const filename = `${Date.now()}-${slug}.pdf`;
+    const outPath = path.join(DATA_DIR, 'uploads', 'cv', filename);
+    await writeFile(outPath, Buffer.from(await file.arrayBuffer()));
+
+    createCv({ slug, label, file_path: `/uploads/cv/${filename}` });
+    return Astro.redirect('/admin/cvs');
+  }
+}
+
+const cvs = getCvs();
+---
+
+<AdminLayout title="CVs">
+  {error && <p class="mb-4 rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>}
+
+  <div class="flex flex-col gap-3">
+    {cvs.map((cv) => (
+      <div class="card flex items-center justify-between gap-4">
+        <div>
+          <p class="font-semibold text-white">{cv.label}</p>
+          <p class="mt-1 font-mono text-xs text-slate-500">/dl/cv/{cv.slug}</p>
+        </div>
+        <div class="flex shrink-0 gap-3">
+          <a href={cv.file_path} target="_blank" rel="noopener noreferrer" class="btn text-sm">Voir</a>
+          <form
+            method="POST"
+            action={`/admin/cvs/${cv.id}/delete`}
+            onsubmit="return confirm('Supprimer ce CV ?')"
+          >
+            <button
+              type="submit"
+              class="rounded-md border border-red-500/30 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
+            >
+              Supprimer
+            </button>
+          </form>
+        </div>
+      </div>
+    ))}
+    {cvs.length === 0 && <p class="text-sm text-slate-500">Aucun CV pour l'instant.</p>}
+  </div>
+
+  <div class="card mt-6 max-w-lg">
+    <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">Ajouter un CV</h2>
+    <form method="POST" enctype="multipart/form-data" class="mt-4 flex flex-col gap-4">
+      <label class="block text-sm text-slate-400">
+        Libellé (affiché sur le site)
+        <input
+          type="text"
+          name="label"
+          required
+          placeholder="CV — Data & IA"
+          class="mt-2 w-full rounded-md border border-white/10 bg-surface px-3 py-2 text-white outline-none focus:border-accent"
+        />
+      </label>
+      <label class="block text-sm text-slate-400">
+        Fichier PDF
+        <input
+          type="file"
+          name="file"
+          accept="application/pdf"
+          required
+          class="mt-2 block text-sm text-slate-400 file:mr-4 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-slate-200"
+        />
+      </label>
+      <button type="submit" class="btn-primary w-fit">Ajouter</button>
+    </form>
+  </div>
+</AdminLayout>

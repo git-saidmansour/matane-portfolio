@@ -1,5 +1,5 @@
 import webpush from 'web-push';
-import { getPushSubscriptions, deletePushSubscription } from './db';
+import { getPushSubscriptions, deletePushSubscription, getCvBySlug } from './db';
 
 let configured = false;
 
@@ -14,20 +14,16 @@ function ensureConfigured(): boolean {
   return true;
 }
 
-const CV_LABELS: Record<string, string> = {
-  'reseaux-cybersecurite': 'CV Réseaux & Cybersécurité',
-  'data-ia': 'CV Data & IA',
-};
-
-export async function notifyCvDownload(type: string): Promise<void> {
+export async function notifyCvDownload(slug: string): Promise<void> {
   if (!ensureConfigured()) return;
 
   const subscriptions = getPushSubscriptions();
   if (subscriptions.length === 0) return;
 
+  const label = getCvBySlug(slug)?.label ?? slug;
   const payload = JSON.stringify({
     title: 'Téléchargement de CV',
-    body: `${CV_LABELS[type] ?? type} vient d'être téléchargé.`,
+    body: `${label} vient d'être téléchargé.`,
   });
 
   await Promise.all(

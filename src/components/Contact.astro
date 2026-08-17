@@ -1,12 +1,16 @@
 ---
+import type { Cv } from '../lib/db';
+
+interface Props {
+  cvs: Cv[];
+}
+
+const { cvs } = Astro.props;
+
 const email = 'mansour50said@gmail.com';
 const socials = [
   { label: 'GitHub', href: 'https://github.com/git-saidmansour' },
   { label: 'LinkedIn', href: 'https://linkedin.com/in/in-saidmansour' },
-];
-const cvs = [
-  { label: 'CV — Réseaux & Cybersécurité', href: '/dl/cv/reseaux-cybersecurite' },
-  { label: 'CV — Data & IA', href: '/dl/cv/data-ia' },
 ];
 ---
 
@@ -29,7 +33,7 @@ const cvs = [
 
   <div class="mt-6 flex flex-wrap items-center gap-4">
     {cvs.map((cv) => (
-      <a href={cv.href} download class="font-mono text-sm text-accent hover:underline">
+      <a href={`/dl/cv/${cv.slug}`} download class="font-mono text-sm text-accent hover:underline">
         &darr; {cv.label}
       </a>
     ))}

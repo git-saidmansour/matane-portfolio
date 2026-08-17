@@ -33,6 +33,10 @@ export const GET: APIRoute = () => {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
+      // Nginx buffers proxied responses by default, which would delay/batch
+      // SSE messages instead of streaming them live. This header disables
+      // buffering for this response specifically.
+      'X-Accel-Buffering': 'no',
     },
   });
 };

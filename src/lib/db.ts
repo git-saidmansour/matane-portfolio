@@ -5,8 +5,8 @@ import { liveEvents } from './events';
 
 const DATA_DIR = process.env.DATA_DIR || './data';
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
-if (!existsSync(path.join(DATA_DIR, 'uploads'))) {
-  mkdirSync(path.join(DATA_DIR, 'uploads'), { recursive: true });
+if (!existsSync(path.join(DATA_DIR, 'uploads', 'cv'))) {
+  mkdirSync(path.join(DATA_DIR, 'uploads', 'cv'), { recursive: true });
 }
 
 const db = new Database(path.join(DATA_DIR, 'db.sqlite'));
@@ -52,6 +52,14 @@ db.exec(`
     endpoint TEXT UNIQUE NOT NULL,
     p256dh TEXT NOT NULL,
     auth TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS cvs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT UNIQUE NOT NULL,
+    label TEXT NOT NULL,
+    file_path TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `);
@@ -144,6 +152,36 @@ export function updateProject(id: number, data: ProjectInput): void {
 
 export function deleteProject(id: number): void {
   db.prepare('DELETE FROM projects WHERE id = ?').run(id);
+}
+
+export interface Cv {
+  id: number;
+  slug: string;
+  label: string;
+  file_path: string;
+}
+
+export function getCvs(): Cv[] {
+  return db.prepare('SELECT * FROM cvs ORDER BY id ASC').all() as Cv[];
+}
+
+export function getCv(id: number): Cv | undefined {
+  return db.prepare('SELECT * FROM cvs WHERE id = ?').get(id) as Cv | undefined;
+}
+
+export function getCvBySlug(slug: string): Cv | undefined {
+  return db.prepare('SELECT * FROM cvs WHERE slug = ?').get(slug) as Cv | undefined;
+}
+
+export function createCv(data: { slug: string; label: string; file_path: string }): number {
+  const result = db
+    .prepare('INSERT INTO cvs (slug, label, file_path) VALUES (@slug, @label, @file_path)')
+    .run(data);
+  return result.lastInsertRowid as number;
+}
+
+export function deleteCv(id: number): void {
+  db.prepare('DELETE FROM cvs WHERE id = ?').run(id);
 }
 
 export interface Profile {
@@ -368,6 +406,23 @@ export function seedIfEmpty() {
   });
 }
 
+function seedCvsIfEmpty() {
+  const count = (db.prepare('SELECT COUNT(*) as n FROM cvs').get() as { n: number }).n;
+  if (count > 0) return;
+
+  createCv({
+    slug: 'reseaux-cybersecurite',
+    label: 'CV — Réseaux & Cybersécurité',
+    file_path: '/cv/matane-mansour-cv-reseaux-cybersecurite.pdf',
+  });
+  createCv({
+    slug: 'data-ia',
+    label: 'CV — Data & IA',
+    file_path: '/cv/matane-mansour-cv-data-ia.pdf',
+  });
+}
+
 seedIfEmpty();
+seedCvsIfEmpty();
 
 export default db;

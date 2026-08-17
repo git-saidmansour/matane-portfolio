@@ -1,14 +1,13 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { getStats } from '../../lib/db';
+import { getStats, getCvs } from '../../lib/db';
 
 const stats = getStats();
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
 
-const cvLabels: Record<string, string> = {
-  'reseaux-cybersecurite': 'CV Réseaux & Cybersécurité',
-  'data-ia': 'CV Data & IA',
-};
+const cvLabels: Record<string, string> = Object.fromEntries(
+  getCvs().map((cv) => [cv.slug, cv.label])
+);
 ---
 
 <AdminLayout title="Vue d'ensemble">
