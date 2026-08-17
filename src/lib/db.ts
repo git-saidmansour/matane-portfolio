@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { mkdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
+import { liveEvents } from './events';
 
 const DATA_DIR = process.env.DATA_DIR || './data';
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
@@ -44,6 +45,15 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_events_type ON events(type);
+  CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);
+
+  CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    endpoint TEXT UNIQUE NOT NULL,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 export interface Project {
@@ -170,9 +180,48 @@ export function updateProfile(data: Partial<Profile>): void {
 
 export function logEvent(type: 'page_view' | 'cv_download', meta?: string): void {
   db.prepare('INSERT INTO events (type, meta) VALUES (?, ?)').run(type, meta ?? null);
+  liveEvents.emit('event', { type, meta });
+}
+
+function countSince(type: string, since: string): number {
+  return (
+    db
+      .prepare("SELECT COUNT(*) as n FROM events WHERE type = ? AND created_at >= ?")
+      .get(type, since) as { n: number }
+  ).n;
+}
+
+function periodBounds() {
+  const now = new Date();
+  const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const startOfWeek = new Date(startOfDay.getTime() - 6 * 24 * 60 * 60 * 1000);
+  const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const startOfYear = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+  const iso = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ');
+  return {
+    day: iso(startOfDay),
+    week: iso(startOfWeek),
+    month: iso(startOfMonth),
+    year: iso(startOfYear),
+  };
 }
 
 export function getStats() {
+  const bounds = periodBounds();
+
+  const pageViewsByPeriod = {
+    day: countSince('page_view', bounds.day),
+    week: countSince('page_view', bounds.week),
+    month: countSince('page_view', bounds.month),
+    year: countSince('page_view', bounds.year),
+  };
+  const cvDownloadsByPeriod = {
+    day: countSince('cv_download', bounds.day),
+    week: countSince('cv_download', bounds.week),
+    month: countSince('cv_download', bounds.month),
+    year: countSince('cv_download', bounds.year),
+  };
+
   const pageViews = (
     db.prepare("SELECT COUNT(*) as n FROM events WHERE type = 'page_view'").get() as { n: number }
   ).n;
@@ -184,7 +233,37 @@ export function getStats() {
   const totalCvDownloads = cvDownloadsByType.reduce((sum, r) => sum + r.n, 0);
   const projectCount = (db.prepare('SELECT COUNT(*) as n FROM projects').get() as { n: number }).n;
 
-  return { pageViews, totalCvDownloads, cvDownloadsByType, projectCount };
+  return {
+    pageViews,
+    totalCvDownloads,
+    cvDownloadsByType,
+    projectCount,
+    pageViewsByPeriod,
+    cvDownloadsByPeriod,
+  };
+}
+
+export interface PushSubscriptionInput {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
+
+export function savePushSubscription(sub: PushSubscriptionInput): void {
+  db.prepare(
+    `INSERT INTO push_subscriptions (endpoint, p256dh, auth) VALUES (@endpoint, @p256dh, @auth)
+     ON CONFLICT(endpoint) DO UPDATE SET p256dh=excluded.p256dh, auth=excluded.auth`
+  ).run(sub);
+}
+
+export function getPushSubscriptions(): (PushSubscriptionInput & { id: number })[] {
+  return db.prepare('SELECT id, endpoint, p256dh, auth FROM push_subscriptions').all() as (PushSubscriptionInput & {
+    id: number;
+  })[];
+}
+
+export function deletePushSubscription(endpoint: string): void {
+  db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').run(endpoint);
 }
 
 export function seedIfEmpty() {

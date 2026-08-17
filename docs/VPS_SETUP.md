@@ -198,3 +198,27 @@ docker compose up -d
 ```
 
 Le dashboard est accessible sur `https://matane-mansour.com/admin`.
+
+## 11. Notifications push (téléchargement de CV)
+
+Génère une paire de clés VAPID (une seule fois, elles ne changent plus ensuite —
+en régénérer d'autres invaliderait les abonnements déjà enregistrés) :
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Ajoute les trois valeurs à `~/matane-portfolio/.env` sur le VPS (en plus de
+`ADMIN_PASSWORD_HASH` et `SESSION_SECRET` déjà présents) :
+
+```bash
+cat >> ~/matane-portfolio/.env << 'EOF'
+VAPID_PUBLIC_KEY=colle_ici_la_cle_publique
+VAPID_PRIVATE_KEY=colle_ici_la_cle_privee
+VAPID_SUBJECT=mailto:mansour50said@gmail.com
+EOF
+docker compose -f ~/matane-portfolio/docker-compose.yml up -d
+```
+
+Puis, sur `/admin`, clique "Activer les notifications" (une fois par
+navigateur/appareil sur lequel tu veux les recevoir).

@@ -1,23 +1,21 @@
 import { defineMiddleware } from 'astro:middleware';
 import { SESSION_COOKIE, isValidSessionCookieValue } from './lib/auth';
+import { isBotRequest } from './lib/bots';
 import { logEvent } from './lib/db';
-
-const BOT_UA_PATTERN =
-  /bot|crawl|spider|slurp|facebookexternalhit|facebot|whatsapp|curl|wget|python-requests|go-http-client|zgrab|headless|preview|monitor|uptime|pingdom|ahrefs|semrush|mj12/i;
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
+  const sessionCookie = context.cookies.get(SESSION_COOKIE)?.value;
+  const isAdmin = isValidSessionCookieValue(sessionCookie);
 
   if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
-    const cookie = context.cookies.get(SESSION_COOKIE)?.value;
-    if (!isValidSessionCookieValue(cookie)) {
+    if (!isAdmin) {
       return context.redirect('/admin/login');
     }
   }
 
   if (pathname === '/' && context.request.method === 'GET') {
-    const ua = context.request.headers.get('user-agent') || '';
-    if (!BOT_UA_PATTERN.test(ua)) {
+    if (!isAdmin && !isBotRequest(context.request)) {
       logEvent('page_view');
     }
   }

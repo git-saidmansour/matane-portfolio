@@ -3,6 +3,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import { getStats } from '../../lib/db';
 
 const stats = getStats();
+const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
 
 const cvLabels: Record<string, string> = {
   'reseaux-cybersecurite': 'CV Réseaux & Cybersécurité',
@@ -11,35 +12,165 @@ const cvLabels: Record<string, string> = {
 ---
 
 <AdminLayout title="Vue d'ensemble">
-  <div class="grid gap-4 sm:grid-cols-3">
+  <div class="grid gap-4 sm:grid-cols-2">
     <div class="card">
       <p class="font-mono text-xs uppercase tracking-wide text-accent">Visites du site</p>
-      <p class="mt-2 text-3xl font-bold text-white">{stats.pageViews}</p>
+      <p class="mt-2 text-3xl font-bold text-white" data-stat="pageViews">{stats.pageViews}</p>
+      <dl class="mt-4 grid grid-cols-4 gap-2 text-center text-xs text-slate-400">
+        <div><dt>Jour</dt><dd class="mt-1 font-mono text-sm text-white" data-stat="pageViewsByPeriod.day">{stats.pageViewsByPeriod.day}</dd></div>
+        <div><dt>Semaine</dt><dd class="mt-1 font-mono text-sm text-white" data-stat="pageViewsByPeriod.week">{stats.pageViewsByPeriod.week}</dd></div>
+        <div><dt>Mois</dt><dd class="mt-1 font-mono text-sm text-white" data-stat="pageViewsByPeriod.month">{stats.pageViewsByPeriod.month}</dd></div>
+        <div><dt>Année</dt><dd class="mt-1 font-mono text-sm text-white" data-stat="pageViewsByPeriod.year">{stats.pageViewsByPeriod.year}</dd></div>
+      </dl>
     </div>
+
     <div class="card">
       <p class="font-mono text-xs uppercase tracking-wide text-accent2">Téléchargements CV</p>
-      <p class="mt-2 text-3xl font-bold text-white">{stats.totalCvDownloads}</p>
+      <p class="mt-2 text-3xl font-bold text-white" data-stat="totalCvDownloads">{stats.totalCvDownloads}</p>
+      <dl class="mt-4 grid grid-cols-4 gap-2 text-center text-xs text-slate-400">
+        <div><dt>Jour</dt><dd class="mt-1 font-mono text-sm text-white" data-stat="cvDownloadsByPeriod.day">{stats.cvDownloadsByPeriod.day}</dd></div>
+        <div><dt>Semaine</dt><dd class="mt-1 font-mono text-sm text-white" data-stat="cvDownloadsByPeriod.week">{stats.cvDownloadsByPeriod.week}</dd></div>
+        <div><dt>Mois</dt><dd class="mt-1 font-mono text-sm text-white" data-stat="cvDownloadsByPeriod.month">{stats.cvDownloadsByPeriod.month}</dd></div>
+        <div><dt>Année</dt><dd class="mt-1 font-mono text-sm text-white" data-stat="cvDownloadsByPeriod.year">{stats.cvDownloadsByPeriod.year}</dd></div>
+      </dl>
     </div>
-    <div class="card">
-      <p class="font-mono text-xs uppercase tracking-wide text-slate-400">Projets</p>
-      <p class="mt-2 text-3xl font-bold text-white">{stats.projectCount}</p>
-    </div>
+  </div>
+
+  <div class="card mt-4">
+    <p class="font-mono text-xs uppercase tracking-wide text-slate-400">Projets</p>
+    <p class="mt-2 text-3xl font-bold text-white" data-stat="projectCount">{stats.projectCount}</p>
   </div>
 
   <div class="card mt-6">
     <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">
       Téléchargements par CV
     </h2>
-    <ul class="mt-4 space-y-2 text-sm">
+    <ul class="mt-4 space-y-2 text-sm" id="cv-breakdown">
       {stats.cvDownloadsByType.length === 0 && (
-        <li class="text-slate-500">Aucun téléchargement pour l'instant.</li>
+        <li class="text-slate-500" data-empty>Aucun téléchargement pour l'instant.</li>
       )}
       {stats.cvDownloadsByType.map((row) => (
-        <li class="flex items-center justify-between text-slate-300">
+        <li class="flex items-center justify-between text-slate-300" data-cv-row={row.meta}>
           <span>{cvLabels[row.meta] ?? row.meta}</span>
           <span class="font-mono text-white">{row.n}</span>
         </li>
       ))}
     </ul>
   </div>
+
+  <div class="card mt-6">
+    <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">Notifications</h2>
+    <p class="mt-2 text-sm text-slate-400">
+      Reçois une notification push dès qu'un CV est téléchargé, même dashboard fermé.
+    </p>
+    <button id="enable-push" class="btn-primary mt-4 text-sm">Activer les notifications</button>
+    <p id="push-status" class="mt-2 text-sm text-slate-500"></p>
+  </div>
 </AdminLayout>
+
+<script define:vars={{ vapidPublicKey }}>
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+  }
+
+  function setByPath(obj, pathStr) {
+    return pathStr.split('.').reduce((acc, key) => (acc == null ? acc : acc[key]), obj);
+  }
+
+  async function refreshStats() {
+    try {
+      const res = await fetch('/admin/api/stats.json', { cache: 'no-store' });
+      const stats = await res.json();
+      document.querySelectorAll('[data-stat]').forEach((el) => {
+        const path = el.getAttribute('data-stat');
+        const value = setByPath(stats, path);
+        if (value !== undefined) el.textContent = value;
+      });
+
+      const breakdown = document.getElementById('cv-breakdown');
+      if (breakdown && stats.cvDownloadsByType) {
+        for (const row of stats.cvDownloadsByType) {
+          let el = breakdown.querySelector(`[data-cv-row="${row.meta}"] span:last-child`);
+          if (el) el.textContent = row.n;
+        }
+      }
+    } catch {
+      // silent — will retry on next event
+    }
+  }
+
+  function connectStream() {
+    const source = new EventSource('/admin/api/events-stream');
+    source.onmessage = () => refreshStats();
+    source.onerror = () => {
+      source.close();
+      setTimeout(connectStream, 5000);
+    };
+  }
+  connectStream();
+
+  const pushStatus = document.getElementById('push-status');
+  const enableBtn = document.getElementById('enable-push');
+
+  async function updatePushUI() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      pushStatus.textContent = "Non supporté par ce navigateur.";
+      enableBtn.disabled = true;
+      return;
+    }
+    if (!vapidPublicKey) {
+      pushStatus.textContent = "Clés VAPID non configurées sur le serveur.";
+      enableBtn.disabled = true;
+      return;
+    }
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = reg ? await reg.pushManager.getSubscription() : null;
+    if (sub) {
+      pushStatus.textContent = 'Notifications activées sur cet appareil.';
+      enableBtn.textContent = 'Désactiver les notifications';
+    } else {
+      pushStatus.textContent = '';
+      enableBtn.textContent = 'Activer les notifications';
+    }
+  }
+
+  enableBtn?.addEventListener('click', async () => {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    const existing = await reg.pushManager.getSubscription();
+
+    if (existing) {
+      await fetch('/admin/api/push-subscribe', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint: existing.endpoint }),
+      });
+      await existing.unsubscribe();
+      await updatePushUI();
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      pushStatus.textContent = 'Permission refusée.';
+      return;
+    }
+
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+    });
+
+    await fetch('/admin/api/push-subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sub.toJSON()),
+    });
+
+    await updatePushUI();
+  });
+
+  updatePushUI();
+</script>
