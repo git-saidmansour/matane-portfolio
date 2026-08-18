@@ -7,6 +7,9 @@ import { resolveLocation } from './lib/geo';
 const VISITOR_COOKIE = 'visitor_id';
 const VISITOR_SESSION_TTL = 30 * 60; // 30 minutes, sliding — standard "session" window
 
+const VISITOR_UID_COOKIE = 'vuid';
+const VISITOR_UID_TTL = 365 * 24 * 60 * 60; // 1 year — persistent anonymous ID, lets us tell repeat visitors apart
+
 function resolveReferrer(request: Request): string {
   const referer = request.headers.get('referer');
   if (!referer) return 'direct';
@@ -30,13 +33,34 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
+  // Persistent anonymous visitor id (separate from the 30-min session-dedup
+  // cookie below) — lets the "recent visitors" admin view tell that the same
+  // browser came back on a later day. Set for any tracked request, not just
+  // "/", so CV/link clicks from a first-ever direct hit still get one.
+  if (!isAdmin && !isBotRequest(context.request)) {
+    const existingUid = context.cookies.get(VISITOR_UID_COOKIE)?.value;
+    const vuid = existingUid || crypto.randomUUID();
+    context.locals.vuid = vuid;
+    context.cookies.set(VISITOR_UID_COOKIE, vuid, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: VISITOR_UID_TTL,
+    });
+  }
+
   if (pathname === '/' && context.request.method === 'GET') {
     if (!isAdmin && !isBotRequest(context.request)) {
       const existingVisitorId = context.cookies.get(VISITOR_COOKIE)?.value;
       const visitorId = existingVisitorId || crypto.randomUUID();
 
       if (!existingVisitorId) {
-        logEvent('page_view', undefined, resolveLocation(context.request), resolveReferrer(context.request));
+        logEvent('page_view', {
+          geo: resolveLocation(context.request),
+          referrer: resolveReferrer(context.request),
+          visitorUid: context.locals.vuid,
+        });
       }
 
       // Sliding expiry: a refresh (or continued browsing) within the window

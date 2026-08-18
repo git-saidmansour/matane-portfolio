@@ -61,6 +61,14 @@ const todayIso = new Date().toISOString().slice(0, 10);
   </div>
 
   <div class="card mt-6">
+    <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">Derniers visiteurs</h2>
+    <p class="mt-1 text-xs text-slate-500">
+      "Revenu" compte les jours distincts sur la période sélectionnée ci-dessus (un même jour ne compte qu'une fois).
+    </p>
+    <div id="recent-visitors" class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3"></div>
+  </div>
+
+  <div class="card mt-6">
     <div class="flex flex-wrap items-center justify-between gap-2">
       <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">30 derniers jours</h2>
       <div class="flex items-center gap-4 font-mono text-xs text-slate-400">
@@ -224,6 +232,49 @@ const todayIso = new Date().toISOString().slice(0, 10);
       .join('');
   }
 
+  function flagEmoji(code) {
+    if (!code || code.length !== 2) return '🏳️';
+    return String.fromCodePoint(...[...code.toUpperCase()].map((c) => 127397 + c.charCodeAt(0)));
+  }
+
+  const relativeTimeFmt = new Intl.RelativeTimeFormat('fr-FR', { numeric: 'auto' });
+
+  function relativeTime(isoStr) {
+    const then = new Date(isoStr.replace(' ', 'T') + 'Z').getTime();
+    const diffMin = Math.round((then - Date.now()) / 60000);
+    if (Math.abs(diffMin) < 60) return relativeTimeFmt.format(diffMin, 'minute');
+    const diffHour = Math.round(diffMin / 60);
+    if (Math.abs(diffHour) < 24) return relativeTimeFmt.format(diffHour, 'hour');
+    return relativeTimeFmt.format(Math.round(diffHour / 24), 'day');
+  }
+
+  function renderRecentVisitors(visitors) {
+    const container = document.getElementById('recent-visitors');
+    if (!visitors || visitors.length === 0) {
+      container.innerHTML = '<p class="text-sm text-slate-500">Aucun visiteur pour l\'instant.</p>';
+      return;
+    }
+    container.innerHTML = visitors
+      .map((v) => {
+        const location = v.country ? `${flagEmoji(v.countryCode)} ${v.country}` : 'Localisation inconnue';
+        const list = (items, empty) => (items.length ? items.join(', ') : empty);
+        return `
+        <div class="rounded-md border border-white/10 bg-bg p-4 text-sm">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-white">${location}</span>
+            <span class="text-xs text-slate-500">${relativeTime(v.lastSeen)}</span>
+          </div>
+          <dl class="mt-3 space-y-1.5 text-xs text-slate-400">
+            <div><dt class="inline text-slate-500">Projets consultés :</dt> <dd class="inline">${list(v.projects, 'aucun')}</dd></div>
+            <div><dt class="inline text-slate-500">Liens cliqués :</dt> <dd class="inline">${list(v.links, 'aucun')}</dd></div>
+            <div><dt class="inline text-slate-500">CV téléchargé :</dt> <dd class="inline">${list(v.cvs, 'aucun')}</dd></div>
+            <div><dt class="inline text-slate-500">Revenu :</dt> <dd class="inline">${v.daysActiveInPeriod} jour${v.daysActiveInPeriod > 1 ? 's' : ''} (période)</dd></div>
+          </dl>
+        </div>`;
+      })
+      .join('');
+  }
+
   function renderChart(series) {
     const container = document.getElementById('chart-container');
     if (!series || series.length === 0) {
@@ -305,6 +356,7 @@ const todayIso = new Date().toISOString().slice(0, 10);
       renderProjectBreakdown(stats.projectClicks);
       renderReferrerBreakdown(stats.referrers);
       renderChart(stats.series);
+      renderRecentVisitors(stats.recentVisitors);
     } catch {
       // silent — will retry on next SSE event
     }

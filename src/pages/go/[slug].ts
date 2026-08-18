@@ -9,7 +9,7 @@ const LINKS: Record<string, string> = {
   linkedin: 'https://linkedin.com/in/in-saidmansour',
 };
 
-export const GET: APIRoute = async ({ params, redirect, request, cookies }) => {
+export const GET: APIRoute = async ({ params, redirect, request, cookies, locals }) => {
   const target = LINKS[params.slug ?? ''];
   if (!target) {
     return new Response('Not found', { status: 404 });
@@ -17,7 +17,7 @@ export const GET: APIRoute = async ({ params, redirect, request, cookies }) => {
 
   const isAdmin = isValidSessionCookieValue(cookies.get(SESSION_COOKIE)?.value);
   if (!isAdmin && !isBotRequest(request)) {
-    logEvent('link_click', params.slug, resolveLocation(request));
+    logEvent('link_click', { meta: params.slug, geo: resolveLocation(request), visitorUid: locals.vuid });
   }
 
   return redirect(target, 302);

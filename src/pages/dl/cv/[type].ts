@@ -5,7 +5,7 @@ import { isValidSessionCookieValue, SESSION_COOKIE } from '../../../lib/auth';
 import { notifyCvDownload } from '../../../lib/push';
 import { resolveLocation } from '../../../lib/geo';
 
-export const GET: APIRoute = async ({ params, redirect, request, cookies }) => {
+export const GET: APIRoute = async ({ params, redirect, request, cookies, locals }) => {
   const cv = getCvBySlug(params.type ?? '');
   if (!cv) {
     return new Response('Not found', { status: 404 });
@@ -13,7 +13,7 @@ export const GET: APIRoute = async ({ params, redirect, request, cookies }) => {
 
   const isAdmin = isValidSessionCookieValue(cookies.get(SESSION_COOKIE)?.value);
   if (!isAdmin && !isBotRequest(request)) {
-    logEvent('cv_download', cv.slug, resolveLocation(request));
+    logEvent('cv_download', { meta: cv.slug, geo: resolveLocation(request), visitorUid: locals.vuid });
     notifyCvDownload(cv.slug).catch(() => {});
   }
 

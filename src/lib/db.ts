@@ -48,9 +48,11 @@ db.exec(`
     lat REAL,
     lon REAL,
     referrer TEXT,
+    visitor_uid TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_events_type ON events(type);
+  CREATE INDEX IF NOT EXISTS idx_events_visitor_uid ON events(visitor_uid);
   CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);
 
   CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -73,12 +75,25 @@ db.exec(`
 // Defensive migration for the `events` table created before geolocation
 // columns existed (CREATE TABLE IF NOT EXISTS above won't add them to an
 // already-existing table). Safe to run on every startup.
-for (const columnDef of ['country_code TEXT', 'country TEXT', 'city TEXT', 'lat REAL', 'lon REAL', 'referrer TEXT']) {
+for (const columnDef of [
+  'country_code TEXT',
+  'country TEXT',
+  'city TEXT',
+  'lat REAL',
+  'lon REAL',
+  'referrer TEXT',
+  'visitor_uid TEXT',
+]) {
   try {
     db.exec(`ALTER TABLE events ADD COLUMN ${columnDef}`);
   } catch {
     // column already exists
   }
+}
+try {
+  db.exec('CREATE INDEX IF NOT EXISTS idx_events_visitor_uid ON events(visitor_uid)');
+} catch {
+  // ignore
 }
 
 export interface Project {
@@ -243,10 +258,18 @@ export interface EventGeo {
 
 export type EventType = 'page_view' | 'cv_download' | 'link_click';
 
-export function logEvent(type: EventType, meta?: string, geo?: EventGeo, referrer?: string): void {
+export interface LogEventOptions {
+  meta?: string;
+  geo?: EventGeo;
+  referrer?: string;
+  visitorUid?: string;
+}
+
+export function logEvent(type: EventType, options: LogEventOptions = {}): void {
+  const { meta, geo, referrer, visitorUid } = options;
   db.prepare(
-    `INSERT INTO events (type, meta, country_code, country, city, lat, lon, referrer)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO events (type, meta, country_code, country, city, lat, lon, referrer, visitor_uid)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     type,
     meta ?? null,
@@ -255,7 +278,8 @@ export function logEvent(type: EventType, meta?: string, geo?: EventGeo, referre
     geo?.city ?? null,
     geo?.lat ?? null,
     geo?.lon ?? null,
-    referrer ?? null
+    referrer ?? null,
+    visitorUid ?? null
   );
   liveEvents.emit('event', { type, meta });
 }
@@ -271,7 +295,7 @@ function countBetween(type: string, start: Date, end: Date): number {
 
 export type PeriodType = 'day' | 'week' | 'month';
 
-function periodRange(type: PeriodType, dateStr: string) {
+export function periodRange(type: PeriodType, dateStr: string) {
   const ref = new Date(`${dateStr}T00:00:00Z`);
   if (Number.isNaN(ref.getTime())) throw new Error('invalid date');
 
@@ -415,6 +439,92 @@ export function getDailySeries(days: number): DailySeriesPoint[] {
   return series;
 }
 
+export interface VisitorSummary {
+  visitorUid: string;
+  lastSeen: string;
+  country: string | null;
+  countryCode: string | null;
+  projects: string[];
+  links: string[];
+  cvs: string[];
+  daysActiveInPeriod: number;
+}
+
+const LINK_LABELS: Record<string, string> = { github: 'GitHub', linkedin: 'LinkedIn' };
+
+export function getRecentVisitors(periodType: PeriodType, periodDate: string, limit = 3): VisitorSummary[] {
+  const recent = db
+    .prepare(
+      `SELECT visitor_uid, MAX(created_at) as last_seen
+       FROM events
+       WHERE visitor_uid IS NOT NULL
+       GROUP BY visitor_uid
+       ORDER BY last_seen DESC
+       LIMIT ?`
+    )
+    .all(limit) as { visitor_uid: string; last_seen: string }[];
+
+  const { start, end } = periodRange(periodType, periodDate);
+  const iso = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ');
+
+  return recent.map(({ visitor_uid, last_seen }) => {
+    const geoRow = db
+      .prepare(
+        `SELECT country, country_code FROM events
+         WHERE visitor_uid = ? AND country IS NOT NULL
+         ORDER BY created_at DESC LIMIT 1`
+      )
+      .get(visitor_uid) as { country: string; country_code: string } | undefined;
+
+    const projectMetas = db
+      .prepare(
+        `SELECT DISTINCT meta FROM events
+         WHERE visitor_uid = ? AND type = 'link_click' AND meta LIKE 'project:%'`
+      )
+      .all(visitor_uid) as { meta: string }[];
+    const projects = [
+      ...new Set(
+        projectMetas.map(({ meta }) => {
+          const [, idStr] = meta.split(':');
+          const project = getProject(Number(idStr));
+          return project?.title ?? `Projet #${idStr}`;
+        })
+      ),
+    ];
+
+    const linkMetas = db
+      .prepare(
+        `SELECT DISTINCT meta FROM events
+         WHERE visitor_uid = ? AND type = 'link_click' AND meta NOT LIKE 'project:%'`
+      )
+      .all(visitor_uid) as { meta: string }[];
+    const links = linkMetas.map(({ meta }) => LINK_LABELS[meta] ?? meta);
+
+    const cvMetas = db
+      .prepare(`SELECT DISTINCT meta FROM events WHERE visitor_uid = ? AND type = 'cv_download'`)
+      .all(visitor_uid) as { meta: string }[];
+    const cvs = cvMetas.map(({ meta }) => getCvBySlug(meta)?.label ?? meta);
+
+    const daysRow = db
+      .prepare(
+        `SELECT COUNT(DISTINCT date(created_at)) as n FROM events
+         WHERE visitor_uid = ? AND type = 'page_view' AND created_at >= ? AND created_at < ?`
+      )
+      .get(visitor_uid, iso(start), iso(end)) as { n: number };
+
+    return {
+      visitorUid: visitor_uid,
+      lastSeen: last_seen,
+      country: geoRow?.country ?? null,
+      countryCode: geoRow?.country_code ?? null,
+      projects,
+      links,
+      cvs,
+      daysActiveInPeriod: daysRow.n,
+    };
+  });
+}
+
 export function getStats(periodType: PeriodType = 'day', periodDate?: string) {
   const dateStr = periodDate ?? new Date().toISOString().slice(0, 10);
 
@@ -444,6 +554,7 @@ export function getStats(periodType: PeriodType = 'day', periodDate?: string) {
     projectClicks: getProjectClickStats(),
     referrers: getReferrerStats(),
     series: getDailySeries(30),
+    recentVisitors: getRecentVisitors(periodType, dateStr, 3),
     projectCount,
     period: getPeriodStats(periodType, dateStr),
   };

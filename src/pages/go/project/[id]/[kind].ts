@@ -4,7 +4,7 @@ import { isBotRequest } from '../../../../lib/bots';
 import { isValidSessionCookieValue, SESSION_COOKIE } from '../../../../lib/auth';
 import { resolveLocation } from '../../../../lib/geo';
 
-export const GET: APIRoute = async ({ params, redirect, request, cookies }) => {
+export const GET: APIRoute = async ({ params, redirect, request, cookies, locals }) => {
   const id = Number(params.id);
   const kind = params.kind;
   if (!Number.isInteger(id) || (kind !== 'repo' && kind !== 'demo')) {
@@ -19,7 +19,11 @@ export const GET: APIRoute = async ({ params, redirect, request, cookies }) => {
 
   const isAdmin = isValidSessionCookieValue(cookies.get(SESSION_COOKIE)?.value);
   if (!isAdmin && !isBotRequest(request)) {
-    logEvent('link_click', `project:${id}:${kind}`, resolveLocation(request));
+    logEvent('link_click', {
+      meta: `project:${id}:${kind}`,
+      geo: resolveLocation(request),
+      visitorUid: locals.vuid,
+    });
   }
 
   return redirect(target, 302);
