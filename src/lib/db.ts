@@ -52,7 +52,6 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_events_type ON events(type);
-  CREATE INDEX IF NOT EXISTS idx_events_visitor_uid ON events(visitor_uid);
   CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);
 
   CREATE TABLE IF NOT EXISTS push_subscriptions (
