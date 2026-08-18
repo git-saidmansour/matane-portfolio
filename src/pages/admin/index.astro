@@ -63,7 +63,7 @@ const todayIso = new Date().toISOString().slice(0, 10);
   <div class="card mt-6">
     <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">Derniers visiteurs</h2>
     <p class="mt-1 text-xs text-slate-500">
-      "Revenu" compte les jours distincts sur la période sélectionnée ci-dessus (un même jour ne compte qu'une fois).
+      "Revenu" compte le nombre de visites sur la période sélectionnée ci-dessus (un simple refresh dans les 30 minutes ne compte pas deux fois, mais plusieurs visites le même jour, espacées, oui).
     </p>
     <div id="recent-visitors" class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3"></div>
   </div>
@@ -268,7 +268,7 @@ const todayIso = new Date().toISOString().slice(0, 10);
             <div><dt class="inline text-slate-500">Projets consultés :</dt> <dd class="inline">${list(v.projects, 'aucun')}</dd></div>
             <div><dt class="inline text-slate-500">Liens cliqués :</dt> <dd class="inline">${list(v.links, 'aucun')}</dd></div>
             <div><dt class="inline text-slate-500">CV téléchargé :</dt> <dd class="inline">${list(v.cvs, 'aucun')}</dd></div>
-            <div><dt class="inline text-slate-500">Revenu :</dt> <dd class="inline">${v.daysActiveInPeriod} jour${v.daysActiveInPeriod > 1 ? 's' : ''} (période)</dd></div>
+            <div><dt class="inline text-slate-500">Revenu :</dt> <dd class="inline">${v.visitsInPeriod} fois (période)</dd></div>
           </dl>
         </div>`;
       })

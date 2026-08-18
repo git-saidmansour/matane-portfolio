@@ -446,7 +446,7 @@ export interface VisitorSummary {
   projects: string[];
   links: string[];
   cvs: string[];
-  daysActiveInPeriod: number;
+  visitsInPeriod: number;
 }
 
 const LINK_LABELS: Record<string, string> = { github: 'GitHub', linkedin: 'LinkedIn' };
@@ -504,9 +504,13 @@ export function getRecentVisitors(periodType: PeriodType, periodDate: string, li
       .all(visitor_uid) as { meta: string }[];
     const cvs = cvMetas.map(({ meta }) => getCvBySlug(meta)?.label ?? meta);
 
-    const daysRow = db
+    // Each page_view event already represents a deduped ~30-min session
+    // (see middleware.ts), so a raw count here is "how many separate visits",
+    // correctly counting multiple same-day visits as long as they're spaced
+    // out — not capped at one per calendar day.
+    const visitsRow = db
       .prepare(
-        `SELECT COUNT(DISTINCT date(created_at)) as n FROM events
+        `SELECT COUNT(*) as n FROM events
          WHERE visitor_uid = ? AND type = 'page_view' AND created_at >= ? AND created_at < ?`
       )
       .get(visitor_uid, iso(start), iso(end)) as { n: number };
@@ -519,7 +523,7 @@ export function getRecentVisitors(periodType: PeriodType, periodDate: string, li
       projects,
       links,
       cvs,
-      daysActiveInPeriod: daysRow.n,
+      visitsInPeriod: visitsRow.n,
     };
   });
 }
