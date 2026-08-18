@@ -1,6 +1,10 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { getLocationStats } from '../../lib/db';
+import { feature } from 'topojson-client';
+import worldTopologyJson from 'world-atlas/countries-110m.json';
+
+const worldTopology: any = worldTopologyJson;
 
 const { byCountry, points } = getLocationStats();
 
@@ -16,9 +20,7 @@ function flagEmoji(code: string | null): string {
   return String.fromCodePoint(...[...code.toUpperCase()].map((c) => 127397 + c.charCodeAt(0)));
 }
 
-// Simple equirectangular projection onto a fixed viewBox — no coastline data
-// embedded (nothing reliable to source offline), so this is a labeled
-// lat/lon position plot on a graticule rather than a detailed political map.
+// Simple equirectangular projection onto a fixed viewBox.
 const MAP_W = 800;
 const MAP_H = 400;
 const maxPointCount = Math.max(1, ...points.map((p) => p.n));
@@ -29,8 +31,41 @@ function project(lat: number, lon: number) {
   return { x, y };
 }
 
-const meridians = Array.from({ length: 11 }, (_, i) => -180 + i * 30);
-const parallels = Array.from({ length: 5 }, (_, i) => -60 + i * 30);
+// Country/continent outlines — Natural Earth data (public domain) via the
+// world-atlas package, at its lowest ("110m") resolution: just enough detail
+// to recognize countries and continents, not a precise coastline trace.
+const worldGeo = feature(worldTopology, worldTopology.objects.countries) as unknown as {
+  features: { properties: { name: string }; geometry: { type: string; coordinates: any } }[];
+};
+
+function ringToPath(ring: [number, number][]): string {
+  return (
+    ring
+      .map(([lon, lat], i) => {
+        const { x, y } = project(lat, lon);
+        return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+      })
+      .join(' ') + ' Z'
+  );
+}
+
+function geometryToPath(geometry: { type: string; coordinates: any }): string {
+  if (geometry.type === 'Polygon') {
+    return geometry.coordinates.map(ringToPath).join(' ');
+  }
+  if (geometry.type === 'MultiPolygon') {
+    return geometry.coordinates
+      .map((polygon: [number, number][][]) => polygon.map(ringToPath).join(' '))
+      .join(' ');
+  }
+  return '';
+}
+
+const countryPaths = worldGeo.features.map((f) => ({
+  name: f.properties.name,
+  d: geometryToPath(f.geometry),
+}));
+
 ---
 
 <AdminLayout title="Localisations">
@@ -39,18 +74,12 @@ const parallels = Array.from({ length: 5 }, (_, i) => -60 + i * 30);
       Position des visiteurs
     </h2>
     <p class="mt-1 text-xs text-slate-500">
-      Repère lat/lon approximatif (pas de tracé de côtes) — un point par ville, taille proportionnelle au nombre d'événements.
+      Un point par ville, taille proportionnelle au nombre d'événements.
     </p>
     <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} class="mt-4 w-full rounded-md border border-white/10 bg-bg">
-      {meridians.map((lon) => {
-        const { x } = project(0, lon);
-        return <line x1={x} y1={0} x2={x} y2={MAP_H} stroke="rgba(148,163,184,0.12)" stroke-width={lon === 0 ? 1 : 0.5} />;
-      })}
-      {parallels.map((lat) => {
-        const { y } = project(lat, 0);
-        return <line x1={0} y1={y} x2={MAP_W} y2={y} stroke="rgba(148,163,184,0.12)" stroke-width={lat === 0 ? 1 : 0.5} />;
-      })}
-      <rect x="0" y="0" width={MAP_W} height={MAP_H} fill="none" stroke="rgba(148,163,184,0.2)" />
+      {countryPaths.map((c) => (
+        <path d={c.d} fill="rgba(148,163,184,0.16)" stroke="rgba(148,163,184,0.35)" stroke-width="0.5" />
+      ))}
       {points.map((p) => {
         const { x, y } = project(p.lat, p.lon);
         const r = 3 + Math.sqrt(p.n / maxPointCount) * 12;
