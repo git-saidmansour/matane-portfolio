@@ -221,44 +221,71 @@ export function logEvent(type: 'page_view' | 'cv_download', meta?: string): void
   liveEvents.emit('event', { type, meta });
 }
 
-function countSince(type: string, since: string): number {
+function countBetween(type: string, start: Date, end: Date): number {
+  const iso = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ');
   return (
     db
-      .prepare("SELECT COUNT(*) as n FROM events WHERE type = ? AND created_at >= ?")
-      .get(type, since) as { n: number }
+      .prepare("SELECT COUNT(*) as n FROM events WHERE type = ? AND created_at >= ? AND created_at < ?")
+      .get(type, iso(start), iso(end)) as { n: number }
   ).n;
 }
 
-function periodBounds() {
-  const now = new Date();
-  const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const startOfWeek = new Date(startOfDay.getTime() - 6 * 24 * 60 * 60 * 1000);
-  const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const startOfYear = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
-  const iso = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ');
+export type PeriodType = 'day' | 'week' | 'month';
+
+function periodRange(type: PeriodType, dateStr: string) {
+  const ref = new Date(`${dateStr}T00:00:00Z`);
+  if (Number.isNaN(ref.getTime())) throw new Error('invalid date');
+
+  const addDays = (d: Date, days: number) => new Date(d.getTime() + days * 24 * 60 * 60 * 1000);
+
+  let start: Date;
+  let end: Date;
+  let prevStart: Date;
+  let prevEnd: Date;
+
+  if (type === 'day') {
+    start = ref;
+    end = addDays(start, 1);
+    prevStart = addDays(start, -1);
+    prevEnd = start;
+  } else if (type === 'week') {
+    const day = ref.getUTCDay(); // 0 = Sunday
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    start = addDays(ref, diffToMonday);
+    end = addDays(start, 7);
+    prevStart = addDays(start, -7);
+    prevEnd = start;
+  } else {
+    start = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), 1));
+    end = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth() + 1, 1));
+    prevStart = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth() - 1, 1));
+    prevEnd = start;
+  }
+
+  return { start, end, prevStart, prevEnd };
+}
+
+export function getPeriodStats(type: PeriodType, dateStr: string) {
+  const { start, end, prevStart, prevEnd } = periodRange(type, dateStr);
+
   return {
-    day: iso(startOfDay),
-    week: iso(startOfWeek),
-    month: iso(startOfMonth),
-    year: iso(startOfYear),
+    type,
+    date: dateStr,
+    rangeStart: start.toISOString(),
+    rangeEnd: end.toISOString(),
+    current: {
+      pageViews: countBetween('page_view', start, end),
+      cvDownloads: countBetween('cv_download', start, end),
+    },
+    previous: {
+      pageViews: countBetween('page_view', prevStart, prevEnd),
+      cvDownloads: countBetween('cv_download', prevStart, prevEnd),
+    },
   };
 }
 
-export function getStats() {
-  const bounds = periodBounds();
-
-  const pageViewsByPeriod = {
-    day: countSince('page_view', bounds.day),
-    week: countSince('page_view', bounds.week),
-    month: countSince('page_view', bounds.month),
-    year: countSince('page_view', bounds.year),
-  };
-  const cvDownloadsByPeriod = {
-    day: countSince('cv_download', bounds.day),
-    week: countSince('cv_download', bounds.week),
-    month: countSince('cv_download', bounds.month),
-    year: countSince('cv_download', bounds.year),
-  };
+export function getStats(periodType: PeriodType = 'day', periodDate?: string) {
+  const dateStr = periodDate ?? new Date().toISOString().slice(0, 10);
 
   const pageViews = (
     db.prepare("SELECT COUNT(*) as n FROM events WHERE type = 'page_view'").get() as { n: number }
@@ -276,8 +303,7 @@ export function getStats() {
     totalCvDownloads,
     cvDownloadsByType,
     projectCount,
-    pageViewsByPeriod,
-    cvDownloadsByPeriod,
+    period: getPeriodStats(periodType, dateStr),
   };
 }
 

@@ -4,57 +4,57 @@ import { getStats, getCvs } from '../../lib/db';
 
 const stats = getStats();
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
-
-const cvLabels: Record<string, string> = Object.fromEntries(
-  getCvs().map((cv) => [cv.slug, cv.label])
-);
+const cvLabels: Record<string, string> = Object.fromEntries(getCvs().map((cv) => [cv.slug, cv.label]));
+const todayIso = new Date().toISOString().slice(0, 10);
 ---
 
 <AdminLayout title="Vue d'ensemble">
-  <div class="grid gap-4 sm:grid-cols-2">
+  <div class="flex flex-wrap items-center gap-3">
+    <div class="inline-flex rounded-md border border-white/10 bg-surface p-1">
+      <button type="button" data-period-type="day" class="period-type-btn rounded px-3 py-1.5 text-sm">Jour</button>
+      <button type="button" data-period-type="week" class="period-type-btn rounded px-3 py-1.5 text-sm">Semaine</button>
+      <button type="button" data-period-type="month" class="period-type-btn rounded px-3 py-1.5 text-sm">Mois</button>
+    </div>
+    <input
+      type="date"
+      id="period-date"
+      value={todayIso}
+      max={todayIso}
+      class="rounded-md border border-white/10 bg-surface px-3 py-2 text-sm text-white outline-none focus:border-accent"
+    />
+    <span id="period-label" class="text-sm text-slate-400"></span>
+  </div>
+
+  <div class="mt-4 grid gap-4 sm:grid-cols-2">
     <div class="card">
-      <p class="font-mono text-xs uppercase tracking-wide text-accent">Visites du site</p>
-      <p class="mt-2 text-3xl font-bold text-white" data-stat="pageViews">{stats.pageViews}</p>
-      <dl class="mt-4 grid grid-cols-4 gap-2 text-center text-xs text-slate-400">
-        <div><dt>Jour</dt><dd class="mt-1 font-mono text-sm text-white" data-stat="pageViewsByPeriod.day">{stats.pageViewsByPeriod.day}</dd></div>
-        <div><dt>Semaine</dt><dd class="mt-1 font-mono text-sm text-white" data-stat="pageViewsByPeriod.week">{stats.pageViewsByPeriod.week}</dd></div>
-        <div><dt>Mois</dt><dd class="mt-1 font-mono text-sm text-white" data-stat="pageViewsByPeriod.month">{stats.pageViewsByPeriod.month}</dd></div>
-        <div><dt>Année</dt><dd class="mt-1 font-mono text-sm text-white" data-stat="pageViewsByPeriod.year">{stats.pageViewsByPeriod.year}</dd></div>
-      </dl>
+      <p class="font-mono text-xs uppercase tracking-wide text-accent">Visites</p>
+      <div class="mt-2 flex items-baseline gap-3">
+        <p class="text-3xl font-bold text-white" id="pv-current">{stats.period.current.pageViews}</p>
+        <span id="pv-trend" class="font-mono text-sm text-slate-400"></span>
+      </div>
+      <p class="mt-2 text-xs text-slate-500">Total (tout temps) : <span id="pv-total">{stats.pageViews}</span></p>
     </div>
 
     <div class="card">
       <p class="font-mono text-xs uppercase tracking-wide text-accent2">Téléchargements CV</p>
-      <p class="mt-2 text-3xl font-bold text-white" data-stat="totalCvDownloads">{stats.totalCvDownloads}</p>
-      <dl class="mt-4 grid grid-cols-4 gap-2 text-center text-xs text-slate-400">
-        <div><dt>Jour</dt><dd class="mt-1 font-mono text-sm text-white" data-stat="cvDownloadsByPeriod.day">{stats.cvDownloadsByPeriod.day}</dd></div>
-        <div><dt>Semaine</dt><dd class="mt-1 font-mono text-sm text-white" data-stat="cvDownloadsByPeriod.week">{stats.cvDownloadsByPeriod.week}</dd></div>
-        <div><dt>Mois</dt><dd class="mt-1 font-mono text-sm text-white" data-stat="cvDownloadsByPeriod.month">{stats.cvDownloadsByPeriod.month}</dd></div>
-        <div><dt>Année</dt><dd class="mt-1 font-mono text-sm text-white" data-stat="cvDownloadsByPeriod.year">{stats.cvDownloadsByPeriod.year}</dd></div>
-      </dl>
+      <div class="mt-2 flex items-baseline gap-3">
+        <p class="text-3xl font-bold text-white" id="cv-current">{stats.period.current.cvDownloads}</p>
+        <span id="cv-trend" class="font-mono text-sm text-slate-400"></span>
+      </div>
+      <p class="mt-2 text-xs text-slate-500">Total (tout temps) : <span id="cv-total">{stats.totalCvDownloads}</span></p>
     </div>
   </div>
 
   <div class="card mt-4">
     <p class="font-mono text-xs uppercase tracking-wide text-slate-400">Projets</p>
-    <p class="mt-2 text-3xl font-bold text-white" data-stat="projectCount">{stats.projectCount}</p>
+    <p class="mt-2 text-3xl font-bold text-white" id="project-count">{stats.projectCount}</p>
   </div>
 
   <div class="card mt-6">
     <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">
-      Téléchargements par CV
+      Téléchargements par CV (tout temps)
     </h2>
-    <ul class="mt-4 space-y-2 text-sm" id="cv-breakdown">
-      {stats.cvDownloadsByType.length === 0 && (
-        <li class="text-slate-500" data-empty>Aucun téléchargement pour l'instant.</li>
-      )}
-      {stats.cvDownloadsByType.map((row) => (
-        <li class="flex items-center justify-between text-slate-300" data-cv-row={row.meta}>
-          <span>{cvLabels[row.meta] ?? row.meta}</span>
-          <span class="font-mono text-white">{row.n}</span>
-        </li>
-      ))}
-    </ul>
+    <ul class="mt-4 space-y-2 text-sm" id="cv-breakdown"></ul>
   </div>
 
   <div class="card mt-6">
@@ -67,7 +67,17 @@ const cvLabels: Record<string, string> = Object.fromEntries(
   </div>
 </AdminLayout>
 
-<script define:vars={{ vapidPublicKey }}>
+<style>
+  .period-type-btn {
+    color: rgb(148 163 184);
+  }
+  .period-type-btn.active {
+    background-color: rgb(34 211 238 / 0.15);
+    color: rgb(34 211 238);
+  }
+</style>
+
+<script define:vars={{ vapidPublicKey, cvLabels, todayIso }}>
   function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -75,31 +85,89 @@ const cvLabels: Record<string, string> = Object.fromEntries(
     return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
   }
 
-  function setByPath(obj, pathStr) {
-    return pathStr.split('.').reduce((acc, key) => (acc == null ? acc : acc[key]), obj);
+  let periodType = 'day';
+  let periodDate = todayIso;
+
+  const dayFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const monthFmt = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const shortFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+
+  function formatPeriodLabel(type, dateStr) {
+    const d = new Date(`${dateStr}T00:00:00Z`);
+    if (type === 'day') return dateStr === todayIso ? "Aujourd'hui" : dayFmt.format(d);
+    if (type === 'month') return monthFmt.format(d);
+    const day = d.getUTCDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    const monday = new Date(d.getTime() + diffToMonday * 86400000);
+    const sunday = new Date(monday.getTime() + 6 * 86400000);
+    return `Semaine du ${shortFmt.format(monday)} au ${dayFmt.format(sunday)}`;
+  }
+
+  function trendBadge(current, previous) {
+    if (current === previous) return { text: '= stable', cls: 'text-slate-400' };
+    if (previous === 0) return { text: `▲ +${current}`, cls: 'text-emerald-400' };
+    const pct = Math.round(((current - previous) / previous) * 100);
+    return pct > 0 ? { text: `▲ +${pct}%`, cls: 'text-emerald-400' } : { text: `▼ ${pct}%`, cls: 'text-red-400' };
+  }
+
+  function applyTrend(elId, current, previous) {
+    const el = document.getElementById(elId);
+    const trend = trendBadge(current, previous);
+    el.textContent = trend.text;
+    el.className = `font-mono text-sm ${trend.cls}`;
+  }
+
+  function renderCvBreakdown(rows) {
+    const list = document.getElementById('cv-breakdown');
+    if (rows.length === 0) {
+      list.innerHTML = '<li class="text-slate-500">Aucun téléchargement pour l\'instant.</li>';
+      return;
+    }
+    list.innerHTML = rows
+      .map(
+        (row) => `
+      <li class="flex items-center justify-between text-slate-300">
+        <span>${cvLabels[row.meta] ?? row.meta}</span>
+        <span class="font-mono text-white">${row.n}</span>
+      </li>`
+      )
+      .join('');
   }
 
   async function refreshStats() {
     try {
-      const res = await fetch('/admin/api/stats.json', { cache: 'no-store' });
+      const res = await fetch(`/admin/api/stats.json?period=${periodType}&date=${periodDate}`, { cache: 'no-store' });
       const stats = await res.json();
-      document.querySelectorAll('[data-stat]').forEach((el) => {
-        const path = el.getAttribute('data-stat');
-        const value = setByPath(stats, path);
-        if (value !== undefined) el.textContent = value;
-      });
 
-      const breakdown = document.getElementById('cv-breakdown');
-      if (breakdown && stats.cvDownloadsByType) {
-        for (const row of stats.cvDownloadsByType) {
-          let el = breakdown.querySelector(`[data-cv-row="${row.meta}"] span:last-child`);
-          if (el) el.textContent = row.n;
-        }
-      }
+      document.getElementById('period-label').textContent = formatPeriodLabel(stats.period.type, stats.period.date);
+      document.getElementById('pv-current').textContent = stats.period.current.pageViews;
+      document.getElementById('cv-current').textContent = stats.period.current.cvDownloads;
+      applyTrend('pv-trend', stats.period.current.pageViews, stats.period.previous.pageViews);
+      applyTrend('cv-trend', stats.period.current.cvDownloads, stats.period.previous.cvDownloads);
+      document.getElementById('pv-total').textContent = stats.pageViews;
+      document.getElementById('cv-total').textContent = stats.totalCvDownloads;
+      document.getElementById('project-count').textContent = stats.projectCount;
+      renderCvBreakdown(stats.cvDownloadsByType);
     } catch {
-      // silent — will retry on next event
+      // silent — will retry on next SSE event
     }
   }
+
+  document.querySelectorAll('.period-type-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.periodType === periodType);
+    btn.addEventListener('click', () => {
+      periodType = btn.dataset.periodType;
+      document.querySelectorAll('.period-type-btn').forEach((b) => b.classList.toggle('active', b === btn));
+      refreshStats();
+    });
+  });
+
+  document.getElementById('period-date').addEventListener('change', (e) => {
+    periodDate = e.target.value || todayIso;
+    refreshStats();
+  });
+
+  refreshStats();
 
   function connectStream() {
     const source = new EventSource('/admin/api/events-stream');
@@ -116,12 +184,12 @@ const cvLabels: Record<string, string> = Object.fromEntries(
 
   async function updatePushUI() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      pushStatus.textContent = "Non supporté par ce navigateur.";
+      pushStatus.textContent = 'Non supporté par ce navigateur.';
       enableBtn.disabled = true;
       return;
     }
     if (!vapidPublicKey) {
-      pushStatus.textContent = "Clés VAPID non configurées sur le serveur.";
+      pushStatus.textContent = 'Clés VAPID non configurées sur le serveur.';
       enableBtn.disabled = true;
       return;
     }
