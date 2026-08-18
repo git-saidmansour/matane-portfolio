@@ -7,6 +7,18 @@ import { resolveLocation } from './lib/geo';
 const VISITOR_COOKIE = 'visitor_id';
 const VISITOR_SESSION_TTL = 30 * 60; // 30 minutes, sliding — standard "session" window
 
+function resolveReferrer(request: Request): string {
+  const referer = request.headers.get('referer');
+  if (!referer) return 'direct';
+  try {
+    const host = new URL(referer).hostname.replace(/^www\./, '');
+    // Same-origin navigation (e.g. an internal link) isn't an external source.
+    return host === new URL(request.url).hostname.replace(/^www\./, '') ? 'direct' : host;
+  } catch {
+    return 'direct';
+  }
+}
+
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
   const sessionCookie = context.cookies.get(SESSION_COOKIE)?.value;
@@ -24,7 +36,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       const visitorId = existingVisitorId || crypto.randomUUID();
 
       if (!existingVisitorId) {
-        logEvent('page_view', undefined, resolveLocation(context.request));
+        logEvent('page_view', undefined, resolveLocation(context.request), resolveReferrer(context.request));
       }
 
       // Sliding expiry: a refresh (or continued browsing) within the window

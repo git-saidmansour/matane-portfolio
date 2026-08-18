@@ -47,6 +47,7 @@ db.exec(`
     city TEXT,
     lat REAL,
     lon REAL,
+    referrer TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_events_type ON events(type);
@@ -72,7 +73,7 @@ db.exec(`
 // Defensive migration for the `events` table created before geolocation
 // columns existed (CREATE TABLE IF NOT EXISTS above won't add them to an
 // already-existing table). Safe to run on every startup.
-for (const columnDef of ['country_code TEXT', 'country TEXT', 'city TEXT', 'lat REAL', 'lon REAL']) {
+for (const columnDef of ['country_code TEXT', 'country TEXT', 'city TEXT', 'lat REAL', 'lon REAL', 'referrer TEXT']) {
   try {
     db.exec(`ALTER TABLE events ADD COLUMN ${columnDef}`);
   } catch {
@@ -242,10 +243,10 @@ export interface EventGeo {
 
 export type EventType = 'page_view' | 'cv_download' | 'link_click';
 
-export function logEvent(type: EventType, meta?: string, geo?: EventGeo): void {
+export function logEvent(type: EventType, meta?: string, geo?: EventGeo, referrer?: string): void {
   db.prepare(
-    `INSERT INTO events (type, meta, country_code, country, city, lat, lon)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO events (type, meta, country_code, country, city, lat, lon, referrer)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     type,
     meta ?? null,
@@ -253,7 +254,8 @@ export function logEvent(type: EventType, meta?: string, geo?: EventGeo): void {
     geo?.country ?? null,
     geo?.city ?? null,
     geo?.lat ?? null,
-    geo?.lon ?? null
+    geo?.lon ?? null,
+    referrer ?? null
   );
   liveEvents.emit('event', { type, meta });
 }
@@ -323,6 +325,96 @@ export function getPeriodStats(type: PeriodType, dateStr: string) {
   };
 }
 
+export interface ProjectClickStat {
+  projectId: number;
+  title: string;
+  repoClicks: number;
+  demoClicks: number;
+}
+
+export function getProjectClickStats(): ProjectClickStat[] {
+  const rows = db
+    .prepare("SELECT meta, COUNT(*) as n FROM events WHERE type = 'link_click' AND meta LIKE 'project:%' GROUP BY meta")
+    .all() as { meta: string; n: number }[];
+
+  const byProject = new Map<number, { repoClicks: number; demoClicks: number }>();
+  for (const row of rows) {
+    // meta format: "project:<id>:<repo|demo>"
+    const [, idStr, kind] = row.meta.split(':');
+    const id = Number(idStr);
+    if (!Number.isInteger(id)) continue;
+    const entry = byProject.get(id) ?? { repoClicks: 0, demoClicks: 0 };
+    if (kind === 'repo') entry.repoClicks += row.n;
+    else if (kind === 'demo') entry.demoClicks += row.n;
+    byProject.set(id, entry);
+  }
+
+  const results: ProjectClickStat[] = [];
+  for (const [id, counts] of byProject) {
+    const project = db.prepare('SELECT title FROM projects WHERE id = ?').get(id) as { title: string } | undefined;
+    results.push({
+      projectId: id,
+      title: project?.title ?? `Projet #${id}`,
+      repoClicks: counts.repoClicks,
+      demoClicks: counts.demoClicks,
+    });
+  }
+
+  return results.sort((a, b) => b.repoClicks + b.demoClicks - (a.repoClicks + a.demoClicks));
+}
+
+export interface ReferrerStat {
+  referrer: string;
+  n: number;
+}
+
+export function getReferrerStats(): ReferrerStat[] {
+  return db
+    .prepare(
+      `SELECT COALESCE(referrer, 'direct') as referrer, COUNT(*) as n
+       FROM events WHERE type = 'page_view'
+       GROUP BY referrer ORDER BY n DESC`
+    )
+    .all() as ReferrerStat[];
+}
+
+export interface DailySeriesPoint {
+  date: string;
+  pageViews: number;
+  cvDownloads: number;
+}
+
+export function getDailySeries(days: number): DailySeriesPoint[] {
+  const rows = db
+    .prepare(
+      `SELECT date(created_at) as date, type, COUNT(*) as n
+       FROM events
+       WHERE created_at >= datetime('now', ?)
+         AND type IN ('page_view', 'cv_download')
+       GROUP BY date(created_at), type`
+    )
+    .all(`-${days} days`) as { date: string; type: string; n: number }[];
+
+  const byDate = new Map<string, { pageViews: number; cvDownloads: number }>();
+  for (const row of rows) {
+    const entry = byDate.get(row.date) ?? { pageViews: 0, cvDownloads: 0 };
+    if (row.type === 'page_view') entry.pageViews = row.n;
+    else entry.cvDownloads = row.n;
+    byDate.set(row.date, entry);
+  }
+
+  const series: DailySeriesPoint[] = [];
+  const today = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - i));
+    const dateStr = d.toISOString().slice(0, 10);
+    const entry = byDate.get(dateStr) ?? { pageViews: 0, cvDownloads: 0 };
+    series.push({ date: dateStr, ...entry });
+  }
+
+  return series;
+}
+
 export function getStats(periodType: PeriodType = 'day', periodDate?: string) {
   const dateStr = periodDate ?? new Date().toISOString().slice(0, 10);
 
@@ -336,7 +428,9 @@ export function getStats(periodType: PeriodType = 'day', periodDate?: string) {
     .all() as { meta: string; n: number }[];
   const totalCvDownloads = cvDownloadsByType.reduce((sum, r) => sum + r.n, 0);
   const linkClicksByType = db
-    .prepare("SELECT meta, COUNT(*) as n FROM events WHERE type = 'link_click' GROUP BY meta")
+    .prepare(
+      "SELECT meta, COUNT(*) as n FROM events WHERE type = 'link_click' AND meta NOT LIKE 'project:%' GROUP BY meta"
+    )
     .all() as { meta: string; n: number }[];
   const totalLinkClicks = linkClicksByType.reduce((sum, r) => sum + r.n, 0);
   const projectCount = (db.prepare('SELECT COUNT(*) as n FROM projects').get() as { n: number }).n;
@@ -347,6 +441,9 @@ export function getStats(periodType: PeriodType = 'day', periodDate?: string) {
     cvDownloadsByType,
     totalLinkClicks,
     linkClicksByType,
+    projectClicks: getProjectClickStats(),
+    referrers: getReferrerStats(),
+    series: getDailySeries(30),
     projectCount,
     period: getPeriodStats(periodType, dateStr),
   };

@@ -23,7 +23,7 @@ const { projects } = Astro.props;
         <div class="mt-5 flex gap-4">
           {project.repo_url && (
             <a
-              href={project.repo_url}
+              href={`/go/project/${project.id}/repo`}
               target="_blank"
               rel="noopener noreferrer"
               class="font-mono text-sm text-accent hover:underline"
@@ -33,7 +33,7 @@ const { projects } = Astro.props;
           )}
           {project.live_url && (
             <a
-              href={project.live_url}
+              href={`/go/project/${project.id}/demo`}
               target="_blank"
               rel="noopener noreferrer"
               class="font-mono text-sm text-accent2 hover:underline"

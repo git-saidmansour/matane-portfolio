@@ -60,6 +60,17 @@ const todayIso = new Date().toISOString().slice(0, 10);
     <p class="mt-2 text-3xl font-bold text-white" id="project-count">{stats.projectCount}</p>
   </div>
 
+  <div class="card mt-6">
+    <div class="flex items-center justify-between">
+      <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">30 derniers jours</h2>
+      <div class="flex items-center gap-4 font-mono text-xs text-slate-400">
+        <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-accent"></span>Visites</span>
+        <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-accent2"></span>Téléchargements CV</span>
+      </div>
+    </div>
+    <div id="chart-container" class="mt-4"></div>
+  </div>
+
   <div class="mt-6 grid gap-6 sm:grid-cols-2">
     <div class="card">
       <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">
@@ -74,15 +85,40 @@ const todayIso = new Date().toISOString().slice(0, 10);
       </h2>
       <ul class="mt-4 space-y-2 text-sm" id="link-breakdown"></ul>
     </div>
+
+    <div class="card">
+      <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">
+        Clics par projet (tout temps)
+      </h2>
+      <ul class="mt-4 space-y-2 text-sm" id="project-breakdown"></ul>
+    </div>
+
+    <div class="card">
+      <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">
+        Sources de trafic (tout temps)
+      </h2>
+      <ul class="mt-4 space-y-2 text-sm" id="referrer-breakdown"></ul>
+    </div>
   </div>
 
-  <div class="card mt-6">
-    <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">Notifications</h2>
-    <p class="mt-2 text-sm text-slate-400">
-      Reçois une notification push dès qu'un CV est téléchargé, même dashboard fermé.
-    </p>
-    <button id="enable-push" class="btn-primary mt-4 text-sm">Activer les notifications</button>
-    <p id="push-status" class="mt-2 text-sm text-slate-500"></p>
+  <div class="mt-6 grid gap-6 sm:grid-cols-2">
+    <div class="card">
+      <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">Notifications</h2>
+      <p class="mt-2 text-sm text-slate-400">
+        Reçois une notification push dès qu'un CV est téléchargé, même dashboard fermé.
+      </p>
+      <button id="enable-push" class="btn-primary mt-4 text-sm">Activer les notifications</button>
+      <p id="push-status" class="mt-2 text-sm text-slate-500"></p>
+    </div>
+
+    <div class="card">
+      <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">Sauvegarde</h2>
+      <p class="mt-2 text-sm text-slate-400">
+        Télécharge une archive complète (base de données + photo/CV uploadés).
+        Tout le contenu ne vit aujourd'hui que sur le VPS — garde une copie de temps en temps.
+      </p>
+      <a href="/admin/backup" class="btn-primary mt-4 inline-flex text-sm">Télécharger une sauvegarde</a>
+    </div>
   </div>
 </AdminLayout>
 
@@ -153,6 +189,100 @@ const todayIso = new Date().toISOString().slice(0, 10);
       .join('');
   }
 
+  function renderProjectBreakdown(rows) {
+    const list = document.getElementById('project-breakdown');
+    if (rows.length === 0) {
+      list.innerHTML = '<li class="text-slate-500">Aucune donnée pour l\'instant.</li>';
+      return;
+    }
+    list.innerHTML = rows
+      .map(
+        (row) => `
+      <li class="flex items-center justify-between text-slate-300">
+        <span>${row.title}</span>
+        <span class="font-mono text-white">${row.repoClicks} code &middot; ${row.demoClicks} démo</span>
+      </li>`
+      )
+      .join('');
+  }
+
+  function renderReferrerBreakdown(rows) {
+    const list = document.getElementById('referrer-breakdown');
+    if (rows.length === 0) {
+      list.innerHTML = '<li class="text-slate-500">Aucune donnée pour l\'instant.</li>';
+      return;
+    }
+    list.innerHTML = rows
+      .map(
+        (row) => `
+      <li class="flex items-center justify-between text-slate-300">
+        <span>${row.referrer === 'direct' ? 'Direct' : row.referrer}</span>
+        <span class="font-mono text-white">${row.n}</span>
+      </li>`
+      )
+      .join('');
+  }
+
+  function renderChart(series) {
+    const container = document.getElementById('chart-container');
+    if (!series || series.length === 0) {
+      container.innerHTML = '<p class="text-sm text-slate-500">Pas encore de données.</p>';
+      return;
+    }
+
+    const W = 720;
+    const H = 220;
+    const pad = { top: 10, right: 10, bottom: 22, left: 8 };
+    const innerW = W - pad.left - pad.right;
+    const innerH = H - pad.top - pad.bottom;
+    const n = series.length;
+    const maxVal = Math.max(1, ...series.map((p) => Math.max(p.pageViews, p.cvDownloads)));
+
+    const x = (i) => pad.left + (n === 1 ? 0 : (i / (n - 1)) * innerW);
+    const y = (v) => pad.top + innerH - (v / maxVal) * innerH;
+
+    const pathFor = (key) =>
+      series.map((p, i) => `${i === 0 ? 'M' : 'L'} ${x(i).toFixed(1)} ${y(p[key]).toFixed(1)}`).join(' ');
+
+    const dotsFor = (key, color) =>
+      series
+        .map(
+          (p, i) => `
+        <circle cx="${x(i).toFixed(1)}" cy="${y(p[key]).toFixed(1)}" r="2" fill="${color}" />
+        <circle cx="${x(i).toFixed(1)}" cy="${y(p[key]).toFixed(1)}" r="8" fill="transparent">
+          <title>${p.date} — ${key === 'pageViews' ? 'Visites' : 'Téléchargements CV'}: ${p[key]}</title>
+        </circle>`
+        )
+        .join('');
+
+    const gridLines = [0, 0.25, 0.5, 0.75, 1]
+      .map((f) => {
+        const gy = pad.top + innerH * f;
+        return `<line x1="${pad.left}" y1="${gy.toFixed(1)}" x2="${W - pad.right}" y2="${gy.toFixed(1)}" stroke="rgba(148,163,184,0.1)" stroke-width="1" />`;
+      })
+      .join('');
+
+    const labelEvery = Math.max(1, Math.round(n / 6));
+    const xLabels = series
+      .map((p, i) => {
+        if (i % labelEvery !== 0 && i !== n - 1) return '';
+        const d = new Date(`${p.date}T00:00:00Z`);
+        const label = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(d);
+        return `<text x="${x(i).toFixed(1)}" y="${H - 4}" font-size="10" fill="rgba(148,163,184,0.7)" text-anchor="middle">${label}</text>`;
+      })
+      .join('');
+
+    container.innerHTML = `
+      <svg viewBox="0 0 ${W} ${H}" class="w-full">
+        ${gridLines}
+        <path d="${pathFor('pageViews')}" fill="none" stroke="#22d3ee" stroke-width="2" />
+        <path d="${pathFor('cvDownloads')}" fill="none" stroke="#a78bfa" stroke-width="2" />
+        ${dotsFor('pageViews', '#22d3ee')}
+        ${dotsFor('cvDownloads', '#a78bfa')}
+        ${xLabels}
+      </svg>`;
+  }
+
   async function refreshStats() {
     try {
       const res = await fetch(`/admin/api/stats.json?period=${periodType}&date=${periodDate}`, { cache: 'no-store' });
@@ -171,6 +301,9 @@ const todayIso = new Date().toISOString().slice(0, 10);
       document.getElementById('project-count').textContent = stats.projectCount;
       renderBreakdown('cv-breakdown', stats.cvDownloadsByType, cvLabels);
       renderBreakdown('link-breakdown', stats.linkClicksByType, linkLabels);
+      renderProjectBreakdown(stats.projectClicks);
+      renderReferrerBreakdown(stats.referrers);
+      renderChart(stats.series);
     } catch {
       // silent — will retry on next SSE event
     }
