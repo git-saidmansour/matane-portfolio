@@ -1,12 +1,13 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { getStats, getCvs } from '../../lib/db';
+import { siteToday } from '../../lib/timezone';
 
 const stats = getStats();
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
 const cvLabels: Record<string, string> = Object.fromEntries(getCvs().map((cv) => [cv.slug, cv.label]));
 const linkLabels: Record<string, string> = { github: 'GitHub', linkedin: 'LinkedIn' };
-const todayIso = new Date().toISOString().slice(0, 10);
+const todayIso = siteToday();
 ---
 
 <AdminLayout title="Vue d'ensemble">

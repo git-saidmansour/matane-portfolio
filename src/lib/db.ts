@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { mkdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { liveEvents } from './events';
+import { siteOffsetHours, siteToday, siteMidnightUtc } from './timezone';
 
 const DATA_DIR = process.env.DATA_DIR || './data';
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
@@ -294,37 +295,51 @@ function countBetween(type: string, start: Date, end: Date): number {
 
 export type PeriodType = 'day' | 'week' | 'month';
 
+// All boundaries below are computed as calendar dates in the site's timezone
+// (Europe/Paris), then converted to their UTC instant — `created_at` is
+// stored in UTC, so the SQL comparisons still work directly against these.
 export function periodRange(type: PeriodType, dateStr: string) {
-  const ref = new Date(`${dateStr}T00:00:00Z`);
+  const ref = new Date(`${dateStr}T00:00:00Z`); // calendar-date arithmetic only, not a real instant
   if (Number.isNaN(ref.getTime())) throw new Error('invalid date');
 
+  const offsetH = siteOffsetHours();
   const addDays = (d: Date, days: number) => new Date(d.getTime() + days * 24 * 60 * 60 * 1000);
+  const toDateStr = (d: Date) => d.toISOString().slice(0, 10);
 
-  let start: Date;
-  let end: Date;
-  let prevStart: Date;
-  let prevEnd: Date;
+  let startStr: string;
+  let endStr: string;
+  let prevStartStr: string;
+  let prevEndStr: string;
 
   if (type === 'day') {
-    start = ref;
-    end = addDays(start, 1);
-    prevStart = addDays(start, -1);
-    prevEnd = start;
+    startStr = dateStr;
+    endStr = toDateStr(addDays(ref, 1));
+    prevStartStr = toDateStr(addDays(ref, -1));
+    prevEndStr = dateStr;
   } else if (type === 'week') {
     const day = ref.getUTCDay(); // 0 = Sunday
     const diffToMonday = day === 0 ? -6 : 1 - day;
-    start = addDays(ref, diffToMonday);
-    end = addDays(start, 7);
-    prevStart = addDays(start, -7);
-    prevEnd = start;
+    const monday = addDays(ref, diffToMonday);
+    startStr = toDateStr(monday);
+    endStr = toDateStr(addDays(monday, 7));
+    prevStartStr = toDateStr(addDays(monday, -7));
+    prevEndStr = startStr;
   } else {
-    start = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), 1));
-    end = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth() + 1, 1));
-    prevStart = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth() - 1, 1));
-    prevEnd = start;
+    const firstOfMonth = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), 1));
+    const firstOfNextMonth = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth() + 1, 1));
+    const firstOfPrevMonth = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth() - 1, 1));
+    startStr = toDateStr(firstOfMonth);
+    endStr = toDateStr(firstOfNextMonth);
+    prevStartStr = toDateStr(firstOfPrevMonth);
+    prevEndStr = startStr;
   }
 
-  return { start, end, prevStart, prevEnd };
+  return {
+    start: siteMidnightUtc(startStr, offsetH),
+    end: siteMidnightUtc(endStr, offsetH),
+    prevStart: siteMidnightUtc(prevStartStr, offsetH),
+    prevEnd: siteMidnightUtc(prevEndStr, offsetH),
+  };
 }
 
 export function getPeriodStats(type: PeriodType, dateStr: string) {
@@ -408,15 +423,18 @@ export interface DailySeriesPoint {
 }
 
 export function getDailySeries(days: number): DailySeriesPoint[] {
+  const offsetH = siteOffsetHours();
+  // Shift the stored (UTC) timestamp by the site's offset before taking its
+  // date, so a bucket matches the site's local calendar day, not UTC's.
   const rows = db
     .prepare(
-      `SELECT date(created_at) as date, type, COUNT(*) as n
+      `SELECT date(created_at, ?) as date, type, COUNT(*) as n
        FROM events
        WHERE created_at >= datetime('now', ?)
          AND type IN ('page_view', 'cv_download')
-       GROUP BY date(created_at), type`
+       GROUP BY date(created_at, ?), type`
     )
-    .all(`-${days} days`) as { date: string; type: string; n: number }[];
+    .all(`${offsetH} hours`, `-${days} days`, `${offsetH} hours`) as { date: string; type: string; n: number }[];
 
   const byDate = new Map<string, { pageViews: number; cvDownloads: number }>();
   for (const row of rows) {
@@ -427,7 +445,7 @@ export function getDailySeries(days: number): DailySeriesPoint[] {
   }
 
   const series: DailySeriesPoint[] = [];
-  const today = new Date();
+  const today = new Date(`${siteToday()}T00:00:00Z`);
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - i));
     const dateStr = d.toISOString().slice(0, 10);
@@ -529,7 +547,7 @@ export function getRecentVisitors(periodType: PeriodType, periodDate: string, li
 }
 
 export function getStats(periodType: PeriodType = 'day', periodDate?: string) {
-  const dateStr = periodDate ?? new Date().toISOString().slice(0, 10);
+  const dateStr = periodDate ?? siteToday();
 
   const pageViews = (
     db.prepare("SELECT COUNT(*) as n FROM events WHERE type = 'page_view'").get() as { n: number }
