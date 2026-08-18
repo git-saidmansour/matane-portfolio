@@ -240,7 +240,9 @@ export interface EventGeo {
   lon: number | null;
 }
 
-export function logEvent(type: 'page_view' | 'cv_download', meta?: string, geo?: EventGeo): void {
+export type EventType = 'page_view' | 'cv_download' | 'link_click';
+
+export function logEvent(type: EventType, meta?: string, geo?: EventGeo): void {
   db.prepare(
     `INSERT INTO events (type, meta, country_code, country, city, lat, lon)
      VALUES (?, ?, ?, ?, ?, ?, ?)`
@@ -311,10 +313,12 @@ export function getPeriodStats(type: PeriodType, dateStr: string) {
     current: {
       pageViews: countBetween('page_view', start, end),
       cvDownloads: countBetween('cv_download', start, end),
+      linkClicks: countBetween('link_click', start, end),
     },
     previous: {
       pageViews: countBetween('page_view', prevStart, prevEnd),
       cvDownloads: countBetween('cv_download', prevStart, prevEnd),
+      linkClicks: countBetween('link_click', prevStart, prevEnd),
     },
   };
 }
@@ -331,12 +335,18 @@ export function getStats(periodType: PeriodType = 'day', periodDate?: string) {
     )
     .all() as { meta: string; n: number }[];
   const totalCvDownloads = cvDownloadsByType.reduce((sum, r) => sum + r.n, 0);
+  const linkClicksByType = db
+    .prepare("SELECT meta, COUNT(*) as n FROM events WHERE type = 'link_click' GROUP BY meta")
+    .all() as { meta: string; n: number }[];
+  const totalLinkClicks = linkClicksByType.reduce((sum, r) => sum + r.n, 0);
   const projectCount = (db.prepare('SELECT COUNT(*) as n FROM projects').get() as { n: number }).n;
 
   return {
     pageViews,
     totalCvDownloads,
     cvDownloadsByType,
+    totalLinkClicks,
+    linkClicksByType,
     projectCount,
     period: getPeriodStats(periodType, dateStr),
   };
@@ -347,6 +357,7 @@ export interface CountryStat {
   country: string;
   visits: number;
   downloads: number;
+  clicks: number;
 }
 
 export interface LocationPoint {
@@ -362,7 +373,8 @@ export function getLocationStats() {
     .prepare(
       `SELECT country_code, country,
          SUM(CASE WHEN type = 'page_view' THEN 1 ELSE 0 END) as visits,
-         SUM(CASE WHEN type = 'cv_download' THEN 1 ELSE 0 END) as downloads
+         SUM(CASE WHEN type = 'cv_download' THEN 1 ELSE 0 END) as downloads,
+         SUM(CASE WHEN type = 'link_click' THEN 1 ELSE 0 END) as clicks
        FROM events
        WHERE country_code IS NOT NULL
        GROUP BY country_code

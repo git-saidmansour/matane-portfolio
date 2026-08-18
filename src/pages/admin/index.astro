@@ -5,6 +5,7 @@ import { getStats, getCvs } from '../../lib/db';
 const stats = getStats();
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
 const cvLabels: Record<string, string> = Object.fromEntries(getCvs().map((cv) => [cv.slug, cv.label]));
+const linkLabels: Record<string, string> = { github: 'GitHub', linkedin: 'LinkedIn' };
 const todayIso = new Date().toISOString().slice(0, 10);
 ---
 
@@ -25,7 +26,7 @@ const todayIso = new Date().toISOString().slice(0, 10);
     <span id="period-label" class="text-sm text-slate-400"></span>
   </div>
 
-  <div class="mt-4 grid gap-4 sm:grid-cols-2">
+  <div class="mt-4 grid gap-4 sm:grid-cols-3">
     <div class="card">
       <p class="font-mono text-xs uppercase tracking-wide text-accent">Visites</p>
       <div class="mt-2 flex items-baseline gap-3">
@@ -43,6 +44,15 @@ const todayIso = new Date().toISOString().slice(0, 10);
       </div>
       <p class="mt-2 text-xs text-slate-500">Total (tout temps) : <span id="cv-total">{stats.totalCvDownloads}</span></p>
     </div>
+
+    <div class="card">
+      <p class="font-mono text-xs uppercase tracking-wide text-slate-400">Clics liens</p>
+      <div class="mt-2 flex items-baseline gap-3">
+        <p class="text-3xl font-bold text-white" id="lc-current">{stats.period.current.linkClicks}</p>
+        <span id="lc-trend" class="font-mono text-sm text-slate-400"></span>
+      </div>
+      <p class="mt-2 text-xs text-slate-500">Total (tout temps) : <span id="lc-total">{stats.totalLinkClicks}</span></p>
+    </div>
   </div>
 
   <div class="card mt-4">
@@ -50,11 +60,20 @@ const todayIso = new Date().toISOString().slice(0, 10);
     <p class="mt-2 text-3xl font-bold text-white" id="project-count">{stats.projectCount}</p>
   </div>
 
-  <div class="card mt-6">
-    <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">
-      Téléchargements par CV (tout temps)
-    </h2>
-    <ul class="mt-4 space-y-2 text-sm" id="cv-breakdown"></ul>
+  <div class="mt-6 grid gap-6 sm:grid-cols-2">
+    <div class="card">
+      <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">
+        Téléchargements par CV (tout temps)
+      </h2>
+      <ul class="mt-4 space-y-2 text-sm" id="cv-breakdown"></ul>
+    </div>
+
+    <div class="card">
+      <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">
+        Clics par lien (tout temps)
+      </h2>
+      <ul class="mt-4 space-y-2 text-sm" id="link-breakdown"></ul>
+    </div>
   </div>
 
   <div class="card mt-6">
@@ -77,7 +96,7 @@ const todayIso = new Date().toISOString().slice(0, 10);
   }
 </style>
 
-<script define:vars={{ vapidPublicKey, cvLabels, todayIso }}>
+<script define:vars={{ vapidPublicKey, cvLabels, linkLabels, todayIso }}>
   function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -117,17 +136,17 @@ const todayIso = new Date().toISOString().slice(0, 10);
     el.className = `font-mono text-sm ${trend.cls}`;
   }
 
-  function renderCvBreakdown(rows) {
-    const list = document.getElementById('cv-breakdown');
+  function renderBreakdown(elId, rows, labels) {
+    const list = document.getElementById(elId);
     if (rows.length === 0) {
-      list.innerHTML = '<li class="text-slate-500">Aucun téléchargement pour l\'instant.</li>';
+      list.innerHTML = '<li class="text-slate-500">Aucune donnée pour l\'instant.</li>';
       return;
     }
     list.innerHTML = rows
       .map(
         (row) => `
       <li class="flex items-center justify-between text-slate-300">
-        <span>${cvLabels[row.meta] ?? row.meta}</span>
+        <span>${labels[row.meta] ?? row.meta}</span>
         <span class="font-mono text-white">${row.n}</span>
       </li>`
       )
@@ -142,12 +161,16 @@ const todayIso = new Date().toISOString().slice(0, 10);
       document.getElementById('period-label').textContent = formatPeriodLabel(stats.period.type, stats.period.date);
       document.getElementById('pv-current').textContent = stats.period.current.pageViews;
       document.getElementById('cv-current').textContent = stats.period.current.cvDownloads;
+      document.getElementById('lc-current').textContent = stats.period.current.linkClicks;
       applyTrend('pv-trend', stats.period.current.pageViews, stats.period.previous.pageViews);
       applyTrend('cv-trend', stats.period.current.cvDownloads, stats.period.previous.cvDownloads);
+      applyTrend('lc-trend', stats.period.current.linkClicks, stats.period.previous.linkClicks);
       document.getElementById('pv-total').textContent = stats.pageViews;
       document.getElementById('cv-total').textContent = stats.totalCvDownloads;
+      document.getElementById('lc-total').textContent = stats.totalLinkClicks;
       document.getElementById('project-count').textContent = stats.projectCount;
-      renderCvBreakdown(stats.cvDownloadsByType);
+      renderBreakdown('cv-breakdown', stats.cvDownloadsByType, cvLabels);
+      renderBreakdown('link-breakdown', stats.linkClicksByType, linkLabels);
     } catch {
       // silent — will retry on next SSE event
     }

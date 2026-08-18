@@ -6,8 +6,10 @@ const { byCountry, points } = getLocationStats();
 
 const visitsSorted = [...byCountry].sort((a, b) => b.visits - a.visits).filter((c) => c.visits > 0);
 const downloadsSorted = [...byCountry].sort((a, b) => b.downloads - a.downloads).filter((c) => c.downloads > 0);
+const clicksSorted = [...byCountry].sort((a, b) => b.clicks - a.clicks).filter((c) => c.clicks > 0);
 const maxVisits = Math.max(1, ...visitsSorted.map((c) => c.visits));
 const maxDownloads = Math.max(1, ...downloadsSorted.map((c) => c.downloads));
+const maxClicks = Math.max(1, ...clicksSorted.map((c) => c.clicks));
 
 function flagEmoji(code: string | null): string {
   if (!code || code.length !== 2) return '🏳️';
@@ -66,7 +68,7 @@ const parallels = Array.from({ length: 5 }, (_, i) => -60 + i * 30);
     </svg>
   </div>
 
-  <div class="mt-6 grid gap-6 sm:grid-cols-2">
+  <div class="mt-6 grid gap-6 sm:grid-cols-3">
     <div class="card">
       <h2 class="font-mono text-xs uppercase tracking-wide text-accent">Visites par pays</h2>
       <ul class="mt-4 flex flex-col gap-2">
@@ -97,6 +99,24 @@ const parallels = Array.from({ length: 5 }, (_, i) => -60 + i * 30);
             </div>
             <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/5">
               <div class="h-full rounded-full bg-accent2" style={`width: ${(c.downloads / maxDownloads) * 100}%`} />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2 class="font-mono text-xs uppercase tracking-wide text-slate-400">Clics sur les liens par pays</h2>
+      <ul class="mt-4 flex flex-col gap-2">
+        {clicksSorted.length === 0 && <li class="text-sm text-slate-500">Aucune donnée pour l'instant.</li>}
+        {clicksSorted.map((c) => (
+          <li>
+            <div class="flex items-center justify-between text-sm text-slate-300">
+              <span>{flagEmoji(c.country_code)} {c.country}</span>
+              <span class="font-mono text-white">{c.clicks}</span>
+            </div>
+            <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+              <div class="h-full rounded-full bg-slate-400" style={`width: ${(c.clicks / maxClicks) * 100}%`} />
             </div>
           </li>
         ))}
