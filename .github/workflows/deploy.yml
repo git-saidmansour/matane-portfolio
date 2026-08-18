@@ -46,6 +46,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           port: ${{ secrets.VPS_SSH_PORT || 22 }}
           script: |
+            set -e
             cd ~/matane-portfolio
             docker compose pull
             docker compose up -d
