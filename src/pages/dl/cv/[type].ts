@@ -3,6 +3,7 @@ import { getCvBySlug, logEvent } from '../../../lib/db';
 import { isBotRequest } from '../../../lib/bots';
 import { isValidSessionCookieValue, SESSION_COOKIE } from '../../../lib/auth';
 import { notifyCvDownload } from '../../../lib/push';
+import { resolveLocation } from '../../../lib/geo';
 
 export const GET: APIRoute = async ({ params, redirect, request, cookies }) => {
   const cv = getCvBySlug(params.type ?? '');
@@ -12,7 +13,7 @@ export const GET: APIRoute = async ({ params, redirect, request, cookies }) => {
 
   const isAdmin = isValidSessionCookieValue(cookies.get(SESSION_COOKIE)?.value);
   if (!isAdmin && !isBotRequest(request)) {
-    logEvent('cv_download', cv.slug);
+    logEvent('cv_download', cv.slug, resolveLocation(request));
     notifyCvDownload(cv.slug).catch(() => {});
   }
 

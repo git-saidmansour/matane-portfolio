@@ -42,6 +42,11 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     type TEXT NOT NULL,
     meta TEXT,
+    country_code TEXT,
+    country TEXT,
+    city TEXT,
+    lat REAL,
+    lon REAL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_events_type ON events(type);
@@ -63,6 +68,17 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `);
+
+// Defensive migration for the `events` table created before geolocation
+// columns existed (CREATE TABLE IF NOT EXISTS above won't add them to an
+// already-existing table). Safe to run on every startup.
+for (const columnDef of ['country_code TEXT', 'country TEXT', 'city TEXT', 'lat REAL', 'lon REAL']) {
+  try {
+    db.exec(`ALTER TABLE events ADD COLUMN ${columnDef}`);
+  } catch {
+    // column already exists
+  }
+}
 
 export interface Project {
   id: number;
@@ -216,8 +232,27 @@ export function updateProfile(data: Partial<Profile>): void {
   ).run(merged);
 }
 
-export function logEvent(type: 'page_view' | 'cv_download', meta?: string): void {
-  db.prepare('INSERT INTO events (type, meta) VALUES (?, ?)').run(type, meta ?? null);
+export interface EventGeo {
+  countryCode: string | null;
+  country: string | null;
+  city: string | null;
+  lat: number | null;
+  lon: number | null;
+}
+
+export function logEvent(type: 'page_view' | 'cv_download', meta?: string, geo?: EventGeo): void {
+  db.prepare(
+    `INSERT INTO events (type, meta, country_code, country, city, lat, lon)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    type,
+    meta ?? null,
+    geo?.countryCode ?? null,
+    geo?.country ?? null,
+    geo?.city ?? null,
+    geo?.lat ?? null,
+    geo?.lon ?? null
+  );
   liveEvents.emit('event', { type, meta });
 }
 
@@ -305,6 +340,47 @@ export function getStats(periodType: PeriodType = 'day', periodDate?: string) {
     projectCount,
     period: getPeriodStats(periodType, dateStr),
   };
+}
+
+export interface CountryStat {
+  country_code: string;
+  country: string;
+  visits: number;
+  downloads: number;
+}
+
+export interface LocationPoint {
+  lat: number;
+  lon: number;
+  city: string | null;
+  country: string | null;
+  n: number;
+}
+
+export function getLocationStats() {
+  const byCountry = db
+    .prepare(
+      `SELECT country_code, country,
+         SUM(CASE WHEN type = 'page_view' THEN 1 ELSE 0 END) as visits,
+         SUM(CASE WHEN type = 'cv_download' THEN 1 ELSE 0 END) as downloads
+       FROM events
+       WHERE country_code IS NOT NULL
+       GROUP BY country_code
+       ORDER BY visits DESC`
+    )
+    .all() as CountryStat[];
+
+  const points = db
+    .prepare(
+      `SELECT lat, lon, city, country, COUNT(*) as n
+       FROM events
+       WHERE lat IS NOT NULL AND lon IS NOT NULL
+       GROUP BY lat, lon, city
+       ORDER BY n DESC`
+    )
+    .all() as LocationPoint[];
+
+  return { byCountry, points };
 }
 
 export interface PushSubscriptionInput {

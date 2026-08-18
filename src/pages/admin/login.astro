@@ -9,10 +9,7 @@ import {
   recordLoginFailure,
   clearLoginFailures,
 } from '../../lib/auth';
-
-function getClientIp(request: Request): string {
-  return request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
-}
+import { getClientIp } from '../../lib/ip';
 
 let error = '';
 const ip = getClientIp(Astro.request);

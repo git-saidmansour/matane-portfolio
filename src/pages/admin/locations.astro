@@ -1,0 +1,106 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getLocationStats } from '../../lib/db';
+
+const { byCountry, points } = getLocationStats();
+
+const visitsSorted = [...byCountry].sort((a, b) => b.visits - a.visits).filter((c) => c.visits > 0);
+const downloadsSorted = [...byCountry].sort((a, b) => b.downloads - a.downloads).filter((c) => c.downloads > 0);
+const maxVisits = Math.max(1, ...visitsSorted.map((c) => c.visits));
+const maxDownloads = Math.max(1, ...downloadsSorted.map((c) => c.downloads));
+
+function flagEmoji(code: string | null): string {
+  if (!code || code.length !== 2) return '🏳️';
+  return String.fromCodePoint(...[...code.toUpperCase()].map((c) => 127397 + c.charCodeAt(0)));
+}
+
+// Simple equirectangular projection onto a fixed viewBox — no coastline data
+// embedded (nothing reliable to source offline), so this is a labeled
+// lat/lon position plot on a graticule rather than a detailed political map.
+const MAP_W = 800;
+const MAP_H = 400;
+const maxPointCount = Math.max(1, ...points.map((p) => p.n));
+
+function project(lat: number, lon: number) {
+  const x = ((lon + 180) / 360) * MAP_W;
+  const y = ((90 - lat) / 180) * MAP_H;
+  return { x, y };
+}
+
+const meridians = Array.from({ length: 11 }, (_, i) => -180 + i * 30);
+const parallels = Array.from({ length: 5 }, (_, i) => -60 + i * 30);
+---
+
+<AdminLayout title="Localisations">
+  <div class="card">
+    <h2 class="font-mono text-xs uppercase tracking-wide text-slate-400">
+      Position des visiteurs
+    </h2>
+    <p class="mt-1 text-xs text-slate-500">
+      Repère lat/lon approximatif (pas de tracé de côtes) — un point par ville, taille proportionnelle au nombre d'événements.
+    </p>
+    <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} class="mt-4 w-full rounded-md border border-white/10 bg-bg">
+      {meridians.map((lon) => {
+        const { x } = project(0, lon);
+        return <line x1={x} y1={0} x2={x} y2={MAP_H} stroke="rgba(148,163,184,0.12)" stroke-width={lon === 0 ? 1 : 0.5} />;
+      })}
+      {parallels.map((lat) => {
+        const { y } = project(lat, 0);
+        return <line x1={0} y1={y} x2={MAP_W} y2={y} stroke="rgba(148,163,184,0.12)" stroke-width={lat === 0 ? 1 : 0.5} />;
+      })}
+      <rect x="0" y="0" width={MAP_W} height={MAP_H} fill="none" stroke="rgba(148,163,184,0.2)" />
+      {points.map((p) => {
+        const { x, y } = project(p.lat, p.lon);
+        const r = 3 + Math.sqrt(p.n / maxPointCount) * 12;
+        return (
+          <circle cx={x} cy={y} r={r} fill="#22d3ee" fill-opacity="0.55" stroke="#22d3ee" stroke-width="1">
+            <title>{[p.city, p.country].filter(Boolean).join(', ')} — {p.n} événement{p.n > 1 ? 's' : ''}</title>
+          </circle>
+        );
+      })}
+      {points.length === 0 && (
+        <text x={MAP_W / 2} y={MAP_H / 2} text-anchor="middle" fill="rgba(148,163,184,0.6)" font-size="14">
+          Pas encore de données de localisation
+        </text>
+      )}
+    </svg>
+  </div>
+
+  <div class="mt-6 grid gap-6 sm:grid-cols-2">
+    <div class="card">
+      <h2 class="font-mono text-xs uppercase tracking-wide text-accent">Visites par pays</h2>
+      <ul class="mt-4 flex flex-col gap-2">
+        {visitsSorted.length === 0 && <li class="text-sm text-slate-500">Aucune donnée pour l'instant.</li>}
+        {visitsSorted.map((c) => (
+          <li>
+            <div class="flex items-center justify-between text-sm text-slate-300">
+              <span>{flagEmoji(c.country_code)} {c.country}</span>
+              <span class="font-mono text-white">{c.visits}</span>
+            </div>
+            <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+              <div class="h-full rounded-full bg-accent" style={`width: ${(c.visits / maxVisits) * 100}%`} />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2 class="font-mono text-xs uppercase tracking-wide text-accent2">Téléchargements CV par pays</h2>
+      <ul class="mt-4 flex flex-col gap-2">
+        {downloadsSorted.length === 0 && <li class="text-sm text-slate-500">Aucune donnée pour l'instant.</li>}
+        {downloadsSorted.map((c) => (
+          <li>
+            <div class="flex items-center justify-between text-sm text-slate-300">
+              <span>{flagEmoji(c.country_code)} {c.country}</span>
+              <span class="font-mono text-white">{c.downloads}</span>
+            </div>
+            <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+              <div class="h-full rounded-full bg-accent2" style={`width: ${(c.downloads / maxDownloads) * 100}%`} />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</AdminLayout>
