@@ -26,7 +26,7 @@ const todayIso = new Date().toISOString().slice(0, 10);
     <span id="period-label" class="text-sm text-slate-400"></span>
   </div>
 
-  <div class="mt-4 grid gap-4 sm:grid-cols-3">
+  <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
     <div class="card">
       <p class="font-mono text-xs uppercase tracking-wide text-accent">Visites</p>
       <div class="mt-2 flex items-baseline gap-3">
@@ -61,7 +61,7 @@ const todayIso = new Date().toISOString().slice(0, 10);
   </div>
 
   <div class="card mt-6">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-wrap items-center justify-between gap-2">
       <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">30 derniers jours</h2>
       <div class="flex items-center gap-4 font-mono text-xs text-slate-400">
         <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-accent"></span>Visites</span>
@@ -71,7 +71,7 @@ const todayIso = new Date().toISOString().slice(0, 10);
     <div id="chart-container" class="mt-4"></div>
   </div>
 
-  <div class="mt-6 grid gap-6 sm:grid-cols-2">
+  <div class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
     <div class="card">
       <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">
         Téléchargements par CV (tout temps)
@@ -101,7 +101,7 @@ const todayIso = new Date().toISOString().slice(0, 10);
     </div>
   </div>
 
-  <div class="mt-6 grid gap-6 sm:grid-cols-2">
+  <div class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
     <div class="card">
       <h2 class="font-mono text-sm uppercase tracking-wide text-slate-400">Notifications</h2>
       <p class="mt-2 text-sm text-slate-400">
@@ -159,10 +159,11 @@ const todayIso = new Date().toISOString().slice(0, 10);
   }
 
   function trendBadge(current, previous) {
-    if (current === previous) return { text: '= stable', cls: 'text-slate-400' };
-    if (previous === 0) return { text: `▲ +${current}`, cls: 'text-emerald-400' };
-    const pct = Math.round(((current - previous) / previous) * 100);
-    return pct > 0 ? { text: `▲ +${pct}%`, cls: 'text-emerald-400' } : { text: `▼ ${pct}%`, cls: 'text-red-400' };
+    const delta = current - previous;
+    if (delta === 0) return { text: '= stable', cls: 'text-slate-400' };
+    return delta > 0
+      ? { text: `▲ +${delta}`, cls: 'text-emerald-400' }
+      : { text: `▼ ${delta}`, cls: 'text-red-400' };
   }
 
   function applyTrend(elId, current, previous) {

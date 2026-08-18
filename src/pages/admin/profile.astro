@@ -54,7 +54,7 @@ const profile = getProfile();
   {success && <p class="mb-4 rounded-md bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">Profil mis à jour.</p>}
 
   <form method="POST" enctype="multipart/form-data" class="flex max-w-2xl flex-col gap-5">
-    <div class="flex items-center gap-4">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
       <img
         src={profile.photo_path}
         alt="Photo actuelle"

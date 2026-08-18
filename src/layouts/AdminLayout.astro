@@ -25,8 +25,42 @@ const navItems = [
     <title>{title} — Admin</title>
   </head>
   <body class="min-h-screen bg-bg text-slate-200">
+    <div class="flex items-center justify-between border-b border-white/10 bg-surface px-4 py-3 sm:hidden">
+      <a href="/" class="font-mono text-sm text-white">
+        matane<span class="text-accent">@</span>admin
+      </a>
+      <button
+        id="mobile-menu-toggle"
+        type="button"
+        aria-label="Menu"
+        aria-expanded="false"
+        class="rounded-md p-2 text-slate-300 hover:bg-white/5 hover:text-white"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+      </button>
+    </div>
+    <nav id="mobile-menu" class="hidden flex-col border-b border-white/10 bg-surface px-4 py-3 sm:hidden">
+      {navItems.map((item) => (
+        <a
+          href={item.href}
+          class="rounded-md px-3 py-2.5 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+        >
+          {item.label}
+        </a>
+      ))}
+      <form method="POST" action="/admin/logout" class="mt-2 border-t border-white/10 pt-2">
+        <button type="submit" class="w-full rounded-md px-3 py-2.5 text-left text-sm text-slate-500 hover:text-red-400">
+          Déconnexion
+        </button>
+      </form>
+    </nav>
+
     <div class="flex min-h-screen">
-      <aside class="w-56 shrink-0 border-r border-white/10 bg-surface px-4 py-6">
+      <aside class="hidden w-56 shrink-0 flex-col border-r border-white/10 bg-surface px-4 py-6 sm:flex">
         <a href="/" class="block font-mono text-sm text-white">
           matane<span class="text-accent">@</span>admin
         </a>
@@ -46,12 +80,23 @@ const navItems = [
           </button>
         </form>
       </aside>
-      <main class="flex-1 px-8 py-8">
-        <h1 class="text-2xl font-bold text-white">{title}</h1>
+      <main class="min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8">
+        <h1 class="text-xl font-bold text-white sm:text-2xl">{title}</h1>
         <div class="mt-6">
           <slot />
         </div>
       </main>
     </div>
+
+    <script>
+      const toggle = document.getElementById('mobile-menu-toggle');
+      const menu = document.getElementById('mobile-menu');
+      toggle?.addEventListener('click', () => {
+        const isOpen = !menu?.classList.contains('hidden');
+        menu?.classList.toggle('hidden');
+        menu?.classList.toggle('flex');
+        toggle.setAttribute('aria-expanded', String(!isOpen));
+      });
+    </script>
   </body>
 </html>
