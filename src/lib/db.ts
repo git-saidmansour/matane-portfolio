@@ -624,6 +624,81 @@ export function getLocationStats() {
   return { byCountry, points };
 }
 
+export interface CountryVisitor {
+  visitorUid: string;
+  lastSeen: string;
+  city: string | null;
+  projects: string[];
+  links: string[];
+  cvs: string[];
+  totalVisits: number;
+}
+
+export function getVisitorsByCountry(countryCode: string): CountryVisitor[] {
+  const rows = db
+    .prepare(
+      `SELECT visitor_uid, MAX(created_at) as last_seen
+       FROM events
+       WHERE country_code = ? AND visitor_uid IS NOT NULL
+       GROUP BY visitor_uid
+       ORDER BY last_seen DESC`
+    )
+    .all(countryCode) as { visitor_uid: string; last_seen: string }[];
+
+  return rows.map(({ visitor_uid, last_seen }) => {
+    const cityRow = db
+      .prepare(
+        `SELECT city FROM events
+         WHERE visitor_uid = ? AND city IS NOT NULL
+         ORDER BY created_at DESC LIMIT 1`
+      )
+      .get(visitor_uid) as { city: string } | undefined;
+
+    const projectMetas = db
+      .prepare(
+        `SELECT DISTINCT meta FROM events
+         WHERE visitor_uid = ? AND type = 'link_click' AND meta LIKE 'project:%'`
+      )
+      .all(visitor_uid) as { meta: string }[];
+    const projects = [
+      ...new Set(
+        projectMetas.map(({ meta }) => {
+          const [, idStr] = meta.split(':');
+          const project = getProject(Number(idStr));
+          return project?.title ?? `Projet #${idStr}`;
+        })
+      ),
+    ];
+
+    const linkMetas = db
+      .prepare(
+        `SELECT DISTINCT meta FROM events
+         WHERE visitor_uid = ? AND type = 'link_click' AND meta NOT LIKE 'project:%'`
+      )
+      .all(visitor_uid) as { meta: string }[];
+    const links = linkMetas.map(({ meta }) => LINK_LABELS[meta] ?? meta);
+
+    const cvMetas = db
+      .prepare(`SELECT DISTINCT meta FROM events WHERE visitor_uid = ? AND type = 'cv_download'`)
+      .all(visitor_uid) as { meta: string }[];
+    const cvs = cvMetas.map(({ meta }) => getCvBySlug(meta)?.label ?? meta);
+
+    const visitsRow = db
+      .prepare(`SELECT COUNT(*) as n FROM events WHERE visitor_uid = ? AND type = 'page_view'`)
+      .get(visitor_uid) as { n: number };
+
+    return {
+      visitorUid: visitor_uid,
+      lastSeen: last_seen,
+      city: cityRow?.city ?? null,
+      projects,
+      links,
+      cvs,
+      totalVisits: visitsRow.n,
+    };
+  });
+}
+
 export interface PushSubscriptionInput {
   endpoint: string;
   p256dh: string;
