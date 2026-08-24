@@ -7,11 +7,22 @@ interface Props {
 }
 
 const {
-  title = 'Matane Mansour — Développeur & Data/Cyber',
-  description = 'Portfolio de Matane Mansour, développeur et étudiant en cybersécurité et data. Projets, compétences et contact.',
+  title = 'Matane Mansour — Data Analyst & IA · Cybersécurité',
+  description = 'Portfolio de Matane Mansour, étudiant en alternance data analyst / IA & cybersécurité à Paris, disponible en alternance dès septembre 2026. Projets Power BI, LangChain, Python, pipelines data et sécurité.',
 } = Astro.props;
 
 const ogImage = new URL('/images/share.jpg', Astro.site);
+
+const personJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: 'Matane Mansour',
+  jobTitle: 'Data Analyst & IA / Cybersécurité',
+  url: 'https://matane-mansour.com',
+  email: 'mailto:mansour50said@gmail.com',
+  sameAs: ['https://github.com/git-saidmansour', 'https://linkedin.com/in/in-saidmansour'],
+  description,
+};
 ---
 
 <!doctype html>
@@ -39,6 +50,8 @@ const ogImage = new URL('/images/share.jpg', Astro.site);
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
+
+    <script type="application/ld+json" set:html={JSON.stringify(personJsonLd)} />
   </head>
   <body>
     <slot />

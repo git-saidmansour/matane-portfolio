@@ -1,9 +1,12 @@
 ---
+import type { Cv } from '../lib/db';
+
 interface Props {
   photoPath?: string;
+  cvs?: Cv[];
 }
 
-const { photoPath = '/images/portrait.webp' } = Astro.props;
+const { photoPath = '/images/portrait.webp', cvs = [] } = Astro.props;
 ---
 
 <section class="relative flex min-h-screen items-center overflow-hidden px-6 pt-24 sm:px-8">
@@ -14,20 +17,34 @@ const { photoPath = '/images/portrait.webp' } = Astro.props;
 
   <div class="mx-auto flex max-w-5xl flex-col-reverse items-center gap-10 sm:flex-row sm:items-center">
     <div class="flex-1">
-      <p class="section-title">Bonjour, je suis</p>
+      <div class="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 font-mono text-xs text-emerald-400">
+        <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+        Disponible en alternance — septembre 2026
+      </div>
+      <p class="section-title mt-4">Bonjour, je suis</p>
       <h1 class="mt-3 text-4xl font-bold text-white sm:text-6xl">
         Matane Mansour
       </h1>
       <p class="mt-4 max-w-2xl text-lg text-slate-400 sm:text-xl">
-        Assistant ingénieur <span class="text-accent2">Systèmes, Réseaux &amp; Cybersécurité</span>
-        et étudiant en <span class="text-accent">Data Analytics &amp; IA</span>.
-        Je construis des infrastructures fiables, des pipelines sécurisés et des
-        outils data/IA de bout en bout.
+        <span class="text-accent">Data Analyst &amp; IA</span> ·
+        <span class="text-accent2">Cybersécurité</span> ·
+        Alternance sept. 2026.
+        Je construis des pipelines data/IA de bout en bout et des
+        infrastructures fiables et sécurisées.
       </p>
       <div class="mt-8 flex flex-wrap gap-4">
         <a href="#projects" class="btn-primary">Voir mes projets</a>
         <a href="#contact" class="btn">Me contacter</a>
       </div>
+      {cvs.length > 0 && (
+        <div class="mt-6 flex flex-wrap items-center gap-4">
+          {cvs.map((cv) => (
+            <a href={`/dl/cv/${cv.slug}`} download class="font-mono text-sm text-accent hover:underline">
+              &darr; {cv.label}
+            </a>
+          ))}
+        </div>
+      )}
     </div>
     <div class="shrink-0">
       <img

@@ -3,6 +3,8 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Hero from '../components/Hero.astro';
 import About from '../components/About.astro';
+import Experience from '../components/Experience.astro';
+import Formation from '../components/Formation.astro';
 import Projects from '../components/Projects.astro';
 import Skills from '../components/Skills.astro';
 import Contact from '../components/Contact.astro';
@@ -17,7 +19,7 @@ const cvs = getCvs();
 <Layout>
   <Header />
   <main>
-    <Hero photoPath={profile.photo_path} />
+    <Hero photoPath={profile.photo_path} cvs={cvs} />
     <About
       bio1={profile.bio_1}
       bio2={profile.bio_2}
@@ -26,6 +28,8 @@ const cvs = getCvs();
       availability={profile.availability}
       languages={profile.languages}
     />
+    <Experience />
+    <Formation />
     <Projects projects={projects} />
     <Skills />
     <Contact cvs={cvs} />

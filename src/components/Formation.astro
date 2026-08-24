@@ -1,0 +1,55 @@
+---
+interface FormationEntry {
+  school: string;
+  period: string;
+  degree: string;
+  detail?: string;
+}
+
+const formations: FormationEntry[] = [
+  {
+    school: 'F2i — Institut Européen, Paris',
+    period: '2026 – 2027',
+    degree: 'Mastère Data Engineer — niveau 7 (Bac+5) RNCP',
+  },
+  {
+    school: 'Université Paris 1 Panthéon-Sorbonne, Paris',
+    period: '2025 – 2026',
+    degree: 'DU Spécialisation Data Analytics',
+  },
+  {
+    school: 'ENSP Douala, Douala',
+    period: '2024 – 2025',
+    degree: 'Master 1 Cybersécurité & Cyberdéfense',
+  },
+  {
+    school: 'IUT de Douala, Douala',
+    period: '2023 – 2024',
+    degree: 'Licence Administration Système & Réseaux',
+    detail: '13,1/20',
+  },
+  {
+    school: 'IUT de Douala, Douala',
+    period: '2021 – 2023',
+    degree: 'DUT Génie Informatique',
+  },
+];
+---
+
+<section id="formation" class="section scroll-mt-24">
+  <p class="section-title">Formation</p>
+  <h2 class="heading">Parcours académique</h2>
+
+  <div class="mt-10 grid gap-4 sm:grid-cols-2">
+    {formations.map((f) => (
+      <div class="card">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <h3 class="font-semibold text-white">{f.school}</h3>
+          <span class="shrink-0 font-mono text-xs text-slate-500">{f.period}</span>
+        </div>
+        <p class="mt-1 text-sm text-accent2">{f.degree}</p>
+        {f.detail && <p class="mt-1 text-xs text-slate-500">{f.detail}</p>}
+      </div>
+    ))}
+  </div>
+</section>
