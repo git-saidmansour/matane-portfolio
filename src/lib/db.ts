@@ -467,7 +467,7 @@ export interface VisitorSummary {
   visitsInPeriod: number;
 }
 
-const LINK_LABELS: Record<string, string> = { github: 'GitHub', linkedin: 'LinkedIn' };
+const LINK_LABELS: Record<string, string> = { github: 'GitHub', linkedin: 'LinkedIn', rootme: 'RootMe' };
 
 export function getRecentVisitors(periodType: PeriodType, periodDate: string, limit = 3): VisitorSummary[] {
   const recent = db

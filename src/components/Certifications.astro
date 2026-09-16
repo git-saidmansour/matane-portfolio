@@ -1,0 +1,30 @@
+---
+interface CertEntry {
+  name: string;
+  issuer: string;
+}
+
+const certifications: CertEntry[] = [
+  { name: 'AZ-900 — Microsoft Azure Fundamentals', issuer: 'Microsoft' },
+  { name: 'DP-900 — Azure Data Fundamentals', issuer: 'Microsoft' },
+  { name: 'Working with BigQuery', issuer: 'Coursera · Google Cloud' },
+  { name: 'Data Warehousing with Snowflake', issuer: 'Snowflake University' },
+];
+---
+
+<section id="certifications" class="section scroll-mt-24">
+  <p class="section-title">Certifications</p>
+  <h2 class="heading">Formations complémentaires</h2>
+
+  <div class="mt-10 grid gap-4 sm:grid-cols-2">
+    {certifications.map((cert) => (
+      <div class="card flex items-center gap-3">
+        <span class="font-mono text-accent">▹</span>
+        <div>
+          <p class="font-semibold text-white">{cert.name}</p>
+          <p class="mt-0.5 text-sm text-slate-500">{cert.issuer}</p>
+        </div>
+      </div>
+    ))}
+  </div>
+</section>

@@ -7,6 +7,7 @@ import { resolveLocation } from '../../lib/geo';
 const LINKS: Record<string, string> = {
   github: 'https://github.com/git-saidmansour',
   linkedin: 'https://linkedin.com/in/in-saidmansour',
+  rootme: 'https://www.root-me.org/matane-mansour',
 };
 
 export const GET: APIRoute = async ({ params, redirect, request, cookies, locals }) => {

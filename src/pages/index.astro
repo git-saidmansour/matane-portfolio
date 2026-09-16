@@ -5,6 +5,7 @@ import Hero from '../components/Hero.astro';
 import About from '../components/About.astro';
 import Experience from '../components/Experience.astro';
 import Formation from '../components/Formation.astro';
+import Certifications from '../components/Certifications.astro';
 import Projects from '../components/Projects.astro';
 import Skills from '../components/Skills.astro';
 import Contact from '../components/Contact.astro';
@@ -31,6 +32,7 @@ const cvs = getCvs();
     <Experience />
     <Formation />
     <Projects projects={projects} />
+    <Certifications />
     <Skills />
     <Contact cvs={cvs} />
   </main>

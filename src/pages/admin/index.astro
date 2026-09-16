@@ -6,7 +6,7 @@ import { siteToday } from '../../lib/timezone';
 const stats = getStats();
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
 const cvLabels: Record<string, string> = Object.fromEntries(getCvs().map((cv) => [cv.slug, cv.label]));
-const linkLabels: Record<string, string> = { github: 'GitHub', linkedin: 'LinkedIn' };
+const linkLabels: Record<string, string> = { github: 'GitHub', linkedin: 'LinkedIn', rootme: 'RootMe' };
 const todayIso = siteToday();
 ---
 
