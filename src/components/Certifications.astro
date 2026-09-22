@@ -1,13 +1,17 @@
 ---
+import Icon from './Icon.astro';
+import type { icons } from '../lib/icons';
+
 interface CertEntry {
   name: string;
   issuer: string;
   status: 'obtained' | 'in_progress';
+  icon: keyof typeof icons | null;
 }
 
 const certifications: CertEntry[] = [
-  { name: 'eJPT — eLearnSecurity Junior Penetration Tester', issuer: 'INE Security', status: 'in_progress' },
-  { name: 'Burp Suite Certified Practitioner', issuer: 'PortSwigger', status: 'in_progress' },
+  { name: 'eJPT — eLearnSecurity Junior Penetration Tester', issuer: 'INE Security', status: 'in_progress', icon: null },
+  { name: 'Burp Suite Certified Practitioner', issuer: 'PortSwigger', status: 'in_progress', icon: 'burpsuite' },
 ];
 ---
 
@@ -24,17 +28,22 @@ const certifications: CertEntry[] = [
           cert.status === 'in_progress' ? 'border-amber-400/25 bg-amber-400/5' : ''
         }`}
       >
-        {cert.status === 'obtained' ? (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-5 w-5 shrink-0 text-emerald-400" aria-hidden="true">
-            <circle cx="12" cy="12" r="9" />
-            <path d="M8.5 12.5l2.5 2.5 5-5" />
-          </svg>
-        ) : (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-5 w-5 shrink-0 text-amber-400" aria-hidden="true">
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 7v5l3.5 2" />
-          </svg>
-        )}
+        <span
+          class={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${
+            cert.status === 'in_progress'
+              ? 'border-amber-400/30 bg-amber-400/10 text-amber-400'
+              : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-400'
+          }`}
+        >
+          {cert.icon ? (
+            <Icon name={cert.icon} class="h-5 w-5" />
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5" aria-hidden="true">
+              <path d="M12 3l7 3.5v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9v-5Z" />
+              <path d="M9.5 12l1.8 1.8L14.8 10" />
+            </svg>
+          )}
+        </span>
         <div>
           <p class="font-semibold text-white">{cert.name}</p>
           <p class="mt-0.5 text-sm text-slate-500">
