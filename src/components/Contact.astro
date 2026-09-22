@@ -1,5 +1,7 @@
 ---
 import type { Cv } from '../lib/db';
+import Icon from './Icon.astro';
+import type { icons } from '../lib/icons';
 
 interface Props {
   cvs: Cv[];
@@ -8,11 +10,11 @@ interface Props {
 const { cvs } = Astro.props;
 
 const email = 'mansour50said@gmail.com';
-const links = [
-  { icon: '✉️', label: 'Email', value: email, href: `mailto:${email}` },
-  { icon: '🐙', label: 'GitHub', value: 'github.com/git-saidmansour', href: '/go/github' },
-  { icon: '💼', label: 'LinkedIn', value: 'Voir le profil', href: '/go/linkedin' },
-  { icon: '🚩', label: 'RootMe', value: 'Voir le profil', href: '/go/rootme' },
+const links: { icon: keyof typeof icons; label: string; value: string; href: string }[] = [
+  { icon: 'gmail', label: 'Email', value: email, href: `mailto:${email}` },
+  { icon: 'github', label: 'GitHub', value: 'github.com/git-saidmansour', href: '/go/github' },
+  { icon: 'linkedin', label: 'LinkedIn', value: 'Voir le profil', href: '/go/linkedin' },
+  { icon: 'rootme', label: 'RootMe', value: 'Voir le profil', href: '/go/rootme' },
 ];
 ---
 
@@ -36,7 +38,7 @@ const links = [
           rel="noopener noreferrer"
           class="flex items-center gap-3 rounded-xl border border-white/10 bg-surface p-4 transition-colors hover:border-accent/40"
         >
-          <span class="text-lg">{link.icon}</span>
+          <Icon name={link.icon} class="h-5 w-5 shrink-0 text-accent2" />
           <div>
             <div class="text-xs text-slate-500">{link.label}</div>
             <div class="text-sm font-medium text-slate-200">{link.value}</div>

@@ -1,5 +1,7 @@
 ---
 import type { Cv } from '../lib/db';
+import Icon from './Icon.astro';
+import type { icons } from '../lib/icons';
 
 interface Props {
   photoPath?: string;
@@ -8,13 +10,15 @@ interface Props {
 
 const { photoPath = '/images/portrait.webp', cvs = [] } = Astro.props;
 
-const tools = [
-  { icon: '🐧', name: 'Linux' },
-  { icon: '🐳', name: 'Docker' },
-  { icon: '🛡️', name: 'Kali · Burp' },
-  { icon: '🐍', name: 'Python' },
-  { icon: '🔀', name: 'Cisco' },
-  { icon: '🤖', name: 'LangChain' },
+const tools: { icon: keyof typeof icons; name: string }[] = [
+  { icon: 'linux', name: 'Linux' },
+  { icon: 'docker', name: 'Docker' },
+  { icon: 'git', name: 'Git' },
+  { icon: 'python', name: 'Python' },
+  { icon: 'kalilinux', name: 'Kali Linux' },
+  { icon: 'burpsuite', name: 'Burp Suite' },
+  { icon: 'cisco', name: 'Cisco' },
+  { icon: 'langchain', name: 'LangChain' },
 ];
 ---
 
@@ -95,8 +99,8 @@ const tools = [
         </p>
         <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
           {tools.map((tool) => (
-            <div class="flex items-center gap-2 opacity-80">
-              <span class="text-sm">{tool.icon}</span>
+            <div class="flex items-center gap-2 opacity-80 transition-opacity hover:opacity-100">
+              <Icon name={tool.icon} class="h-4 w-4 text-accent2" />
               <span class="font-mono text-xs font-semibold text-slate-300">{tool.name}</span>
             </div>
           ))}
