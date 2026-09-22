@@ -29,5 +29,58 @@ const links = [
     <a href="#contact" class="btn-primary hidden text-sm sm:inline-flex">
       Me contacter
     </a>
+    <button
+      id="menu-toggle"
+      type="button"
+      aria-expanded="false"
+      aria-controls="mobile-menu"
+      aria-label="Ouvrir le menu"
+      class="flex h-9 w-9 flex-col items-center justify-center gap-1.5 sm:hidden"
+    >
+      <span class="h-0.5 w-5 rounded-full bg-slate-200 transition-transform"></span>
+      <span class="h-0.5 w-5 rounded-full bg-slate-200 transition-opacity"></span>
+      <span class="h-0.5 w-5 rounded-full bg-slate-200 transition-transform"></span>
+    </button>
   </nav>
+
+  <ul
+    id="mobile-menu"
+    class="hidden flex-col gap-1 border-t border-white/5 bg-bg/95 px-6 pb-4 pt-2 backdrop-blur sm:hidden"
+  >
+    {links.map((link) => (
+      <li>
+        <a
+          href={link.href}
+          class="block rounded-md px-3 py-2.5 font-mono text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-accent"
+        >
+          {link.label}
+        </a>
+      </li>
+    ))}
+    <li class="pt-2">
+      <a href="#contact" class="btn-primary w-full justify-center text-sm">
+        Me contacter
+      </a>
+    </li>
+  </ul>
 </header>
+
+<script>
+  const toggle = document.getElementById('menu-toggle');
+  const menu = document.getElementById('mobile-menu');
+
+  const closeMenu = () => {
+    menu?.classList.add('hidden');
+    menu?.classList.remove('flex');
+    toggle?.setAttribute('aria-expanded', 'false');
+  };
+
+  toggle?.addEventListener('click', () => {
+    const isOpen = !menu?.classList.contains('hidden');
+    menu?.classList.toggle('hidden');
+    menu?.classList.toggle('flex');
+    toggle.setAttribute('aria-expanded', String(!isOpen));
+  });
+
+  menu?.querySelectorAll('a').forEach((link) => link.addEventListener('click', closeMenu));
+</script>

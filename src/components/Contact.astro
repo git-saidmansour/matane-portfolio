@@ -8,35 +8,112 @@ interface Props {
 const { cvs } = Astro.props;
 
 const email = 'mansour50said@gmail.com';
-const socials = [
-  { label: 'GitHub', href: '/go/github' },
-  { label: 'LinkedIn', href: '/go/linkedin' },
-  { label: 'Profil RootMe →', href: '/go/rootme' },
+const links = [
+  { icon: '✉️', label: 'Email', value: email, href: `mailto:${email}` },
+  { icon: '🐙', label: 'GitHub', value: 'github.com/git-saidmansour', href: '/go/github' },
+  { icon: '💼', label: 'LinkedIn', value: 'Voir le profil', href: '/go/linkedin' },
+  { icon: '🚩', label: 'RootMe', value: 'Voir le profil', href: '/go/rootme' },
 ];
 ---
 
 <section id="contact" class="section scroll-mt-24">
-  <p class="section-title">Contact</p>
-  <h2 class="heading">Discutons</h2>
-  <p class="mt-4 max-w-2xl text-slate-400">
+  <div class="section-head">
+    <p class="section-title-pill">Contact</p>
+    <h2 class="heading">Discutons</h2>
+  </div>
+  <p class="mx-auto max-w-2xl text-center text-slate-400">
     Ouvert à une alternance de 12 à 24 mois à partir de septembre 2026, ou à
     toute collaboration sur des projets. N'hésite pas à me contacter.
   </p>
 
-  <div class="mt-8 flex flex-wrap items-center gap-4">
-    <a href={`mailto:${email}`} class="btn-primary">{email}</a>
-    {socials.map((social) => (
-      <a href={social.href} target="_blank" rel="noopener noreferrer" class="btn">
-        {social.label}
-      </a>
-    ))}
-  </div>
+  <div class="mx-auto mt-10 grid max-w-3xl gap-10 sm:grid-cols-2">
+    {/* Liens rapides */}
+    <div class="flex flex-col gap-3">
+      {links.map((link) => (
+        <a
+          href={link.href}
+          target={link.href.startsWith('http') || link.href.startsWith('/go') ? '_blank' : undefined}
+          rel="noopener noreferrer"
+          class="flex items-center gap-3 rounded-xl border border-white/10 bg-surface p-4 transition-colors hover:border-accent/40"
+        >
+          <span class="text-lg">{link.icon}</span>
+          <div>
+            <div class="text-xs text-slate-500">{link.label}</div>
+            <div class="text-sm font-medium text-slate-200">{link.value}</div>
+          </div>
+        </a>
+      ))}
+      {cvs.length > 0 && (
+        <div class="mt-1 flex flex-wrap items-center gap-4 px-1">
+          {cvs.map((cv) => (
+            <a href={`/dl/cv/${cv.slug}`} download class="font-mono text-sm text-accent hover:underline">
+              &darr; {cv.label}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
 
-  <div class="mt-6 flex flex-wrap items-center gap-4">
-    {cvs.map((cv) => (
-      <a href={`/dl/cv/${cv.slug}`} download class="font-mono text-sm text-accent hover:underline">
-        &darr; {cv.label}
-      </a>
-    ))}
+    {/* Formulaire (ouvre le client mail avec le message pré-rempli) */}
+    <div id="contact-form-wrap">
+      <form id="contact-form" class="flex flex-col gap-4">
+        <div>
+          <label for="contact-name" class="mb-1.5 block text-xs text-slate-500">Nom</label>
+          <input
+            id="contact-name"
+            name="name"
+            type="text"
+            autocomplete="name"
+            required
+            placeholder="Ton nom"
+            class="w-full rounded-lg border border-white/10 bg-surface px-3.5 py-2.5 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-600 focus:border-accent/50"
+          />
+        </div>
+        <div>
+          <label for="contact-email" class="mb-1.5 block text-xs text-slate-500">Email</label>
+          <input
+            id="contact-email"
+            name="email"
+            type="email"
+            autocomplete="email"
+            required
+            placeholder="ton@email.com"
+            class="w-full rounded-lg border border-white/10 bg-surface px-3.5 py-2.5 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-600 focus:border-accent/50"
+          />
+        </div>
+        <div>
+          <label for="contact-message" class="mb-1.5 block text-xs text-slate-500">Message</label>
+          <textarea
+            id="contact-message"
+            name="message"
+            rows="4"
+            required
+            placeholder="Ton message..."
+            class="w-full resize-none rounded-lg border border-white/10 bg-surface px-3.5 py-2.5 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-600 focus:border-accent/50"
+          ></textarea>
+        </div>
+        <button type="submit" class="btn-primary justify-center">
+          Ouvrir mon client mail
+        </button>
+        <p class="text-center text-xs text-slate-500">
+          Ceci ouvre ta messagerie avec le message pré-rempli — rien n'est envoyé automatiquement.
+        </p>
+      </form>
+    </div>
   </div>
 </section>
+
+<script define:vars={{ email }}>
+  const form = document.getElementById('contact-form');
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const data = new FormData(form);
+    const name = String(data.get('name') || '');
+    const fromEmail = String(data.get('email') || '');
+    const message = String(data.get('message') || '');
+
+    const subject = encodeURIComponent(`${name} — via portfolio`);
+    const body = encodeURIComponent(`${message}\n\n— ${name} (${fromEmail})`);
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+  });
+</script>

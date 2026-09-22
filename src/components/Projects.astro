@@ -6,43 +6,62 @@ interface Props {
 }
 
 const { projects } = Astro.props;
+
+// Couleur d'accent qui tourne par projet, pour éviter que toutes les
+// cartes soient identiques.
+const palette = [
+  { card: 'project-card-cyan', tag: 'project-tag-cyan' },
+  { card: 'project-card-purple', tag: 'project-tag-purple' },
+  { card: 'project-card-emerald', tag: 'project-tag-emerald' },
+  { card: 'project-card-amber', tag: 'project-tag-amber' },
+];
 ---
 
 <section id="projects" class="section scroll-mt-24">
-  <p class="section-title">Projets</p>
-  <h2 class="heading">Ce que j'ai construit</h2>
+  <div class="section-head">
+    <p class="section-title-pill">Projets</p>
+    <h2 class="heading">Ce que j'ai construit</h2>
+  </div>
 
   <div class="mt-10 grid gap-6 sm:grid-cols-2">
-    {projects.map((project) => (
-      <article class="card flex flex-col">
-        <h3 class="text-lg font-semibold text-white">{project.title}</h3>
-        <p class="mt-2 flex-1 text-sm text-slate-400">{project.description}</p>
-        <div class="mt-4 flex flex-wrap gap-2">
-          {project.tags.map((tag) => <span class="tag">{tag}</span>)}
-        </div>
-        <div class="mt-5 flex gap-4">
-          {project.repo_url && (
-            <a
-              href={`/go/project/${project.id}/repo`}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="font-mono text-sm text-accent hover:underline"
-            >
-              Code &rarr;
-            </a>
+    {projects.map((project, i) => {
+      const colors = palette[i % palette.length];
+      return (
+        <article class={`project-card ${colors.card}`}>
+          {project.tags[0] && (
+            <span class={`mb-3 inline-block w-fit rounded-md border px-2.5 py-1 font-mono text-[11px] ${colors.tag}`}>
+              {project.tags[0]}
+            </span>
           )}
-          {project.live_url && (
-            <a
-              href={`/go/project/${project.id}/demo`}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="font-mono text-sm text-accent2 hover:underline"
-            >
-              Démo &rarr;
-            </a>
-          )}
-        </div>
-      </article>
-    ))}
+          <h3 class="text-lg font-semibold text-white">{project.title}</h3>
+          <p class="mt-2 flex-1 text-sm text-slate-400">{project.description}</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            {project.tags.map((tag) => <span class="tag">{tag}</span>)}
+          </div>
+          <div class="mt-5 flex gap-4">
+            {project.repo_url && (
+              <a
+                href={`/go/project/${project.id}/repo`}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="font-mono text-sm text-accent hover:underline"
+              >
+                Code &rarr;
+              </a>
+            )}
+            {project.live_url && (
+              <a
+                href={`/go/project/${project.id}/demo`}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="font-mono text-sm text-accent2 hover:underline"
+              >
+                Démo &rarr;
+              </a>
+            )}
+          </div>
+        </article>
+      );
+    })}
   </div>
 </section>

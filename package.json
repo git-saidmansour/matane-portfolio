@@ -31,5 +31,11 @@
     "@types/topojson-client": "^3.1.5",
     "@types/web-push": "^3.6.4",
     "typescript": "^5.9.3"
+  },
+  "allowScripts": {
+    "sharp@0.33.5": true,
+    "sharp@0.35.3": true,
+    "better-sqlite3@13.0.3": true,
+    "esbuild@0.21.5": true
   }
 }
