@@ -2,13 +2,12 @@
 interface CertEntry {
   name: string;
   issuer: string;
+  status: 'obtained' | 'in_progress';
 }
 
 const certifications: CertEntry[] = [
-  { name: 'AZ-900 — Microsoft Azure Fundamentals', issuer: 'Microsoft' },
-  { name: 'DP-900 — Azure Data Fundamentals', issuer: 'Microsoft' },
-  { name: 'Working with BigQuery', issuer: 'Coursera · Google Cloud' },
-  { name: 'Data Warehousing with Snowflake', issuer: 'Snowflake University' },
+  { name: 'eJPT — eLearnSecurity Junior Penetration Tester', issuer: 'INE Security', status: 'in_progress' },
+  { name: 'Burp Suite Certified Practitioner', issuer: 'PortSwigger', status: 'in_progress' },
 ];
 ---
 
@@ -18,13 +17,30 @@ const certifications: CertEntry[] = [
     <h2 class="heading">Formations complémentaires</h2>
   </div>
 
-  <div class="mt-10 grid gap-4 sm:grid-cols-2">
+  <div class="mx-auto mt-10 grid max-w-3xl gap-4 sm:grid-cols-2">
     {certifications.map((cert) => (
-      <div class="card flex items-center gap-3">
-        <span class="font-mono text-accent">▹</span>
+      <div
+        class={`card flex items-center gap-3 ${
+          cert.status === 'in_progress' ? 'border-amber-400/25 bg-amber-400/5' : ''
+        }`}
+      >
+        {cert.status === 'obtained' ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-5 w-5 shrink-0 text-emerald-400" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M8.5 12.5l2.5 2.5 5-5" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-5 w-5 shrink-0 text-amber-400" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3.5 2" />
+          </svg>
+        )}
         <div>
           <p class="font-semibold text-white">{cert.name}</p>
-          <p class="mt-0.5 text-sm text-slate-500">{cert.issuer}</p>
+          <p class="mt-0.5 text-sm text-slate-500">
+            {cert.issuer}
+            {cert.status === 'in_progress' && <span class="text-amber-400"> · En préparation</span>}
+          </p>
         </div>
       </div>
     ))}

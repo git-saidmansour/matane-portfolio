@@ -8,6 +8,7 @@ const LINKS: Record<string, string> = {
   github: 'https://github.com/git-saidmansour',
   linkedin: 'https://linkedin.com/in/in-saidmansour',
   rootme: 'https://www.root-me.org/matane-mansour',
+  yeswehack: 'https://yeswehack.com/hunters/saidmansour',
 };
 
 export const GET: APIRoute = async ({ params, redirect, request, cookies, locals }) => {

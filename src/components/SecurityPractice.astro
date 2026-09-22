@@ -1,0 +1,56 @@
+---
+import Icon from './Icon.astro';
+
+const practices = [
+  {
+    icon: 'rootme' as const,
+    name: 'RootMe',
+    description: 'Challenges techniques (web, crypto, système, reverse) sur environnements dédiés.',
+    href: '/go/rootme',
+  },
+  {
+    icon: null,
+    name: 'YesWeHack',
+    description: 'Bug bounty responsable sur des programmes publics et privés.',
+    href: '/go/yeswehack',
+  },
+];
+---
+
+<section id="practice" class="section scroll-mt-24">
+  <div class="section-head">
+    <p class="section-title-pill">Pratique</p>
+    <h2 class="heading">Mise en pratique</h2>
+  </div>
+  <p class="mx-auto max-w-2xl text-center text-slate-400">
+    Là où la théorie est confrontée à de vrais systèmes, dans un cadre légal et responsable.
+  </p>
+
+  <div class="mx-auto mt-10 grid max-w-3xl gap-6 sm:grid-cols-2">
+    {practices.map((p) => (
+      <a
+        href={p.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="card flex flex-col gap-3"
+      >
+        <div class="flex items-center gap-3">
+          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-accent/30 bg-accent/10 text-accent">
+            {p.icon ? (
+              <Icon name={p.icon} class="h-5 w-5" />
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5" aria-hidden="true">
+                <circle cx="12" cy="12" r="8" />
+                <circle cx="12" cy="12" r="3.5" />
+                <path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22" />
+              </svg>
+            )}
+          </span>
+          <h3 class="text-lg font-semibold text-white">{p.name}</h3>
+        </div>
+        <p class="text-sm text-slate-400">{p.description}</p>
+        <span class="mt-auto font-mono text-xs text-accent">Voir le profil &rarr;</span>
+      </a>
+    ))}
+  </div>
+</section>

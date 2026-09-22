@@ -5,28 +5,29 @@ const links = [
   { href: '#formation', label: 'Formation' },
   { href: '#projects', label: 'Projets' },
   { href: '#skills', label: 'Compétences' },
+  { href: '#practice', label: 'Pratique' },
   { href: '#contact', label: 'Contact' },
 ];
 ---
 
 <header class="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-bg/80 backdrop-blur">
-  <nav class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
-    <a href="#" class="font-mono text-sm font-semibold text-white">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4 sm:px-8">
+    <a href="#" class="shrink-0 font-mono text-sm font-semibold text-white">
       matane<span class="text-accent">@</span>portfolio<span class="text-accent">:~$</span>
     </a>
-    <ul class="hidden gap-8 sm:flex">
+    <ul class="hidden gap-5 lg:flex xl:gap-8">
       {links.map((link) => (
         <li>
           <a
             href={link.href}
-            class="font-mono text-sm text-slate-300 transition-colors hover:text-accent"
+            class="whitespace-nowrap font-mono text-sm text-slate-300 transition-colors hover:text-accent"
           >
             {link.label}
           </a>
         </li>
       ))}
     </ul>
-    <a href="#contact" class="btn-primary hidden text-sm sm:inline-flex">
+    <a href="#contact" class="btn-primary hidden shrink-0 text-sm lg:inline-flex">
       Me contacter
     </a>
     <button
@@ -35,7 +36,7 @@ const links = [
       aria-expanded="false"
       aria-controls="mobile-menu"
       aria-label="Ouvrir le menu"
-      class="flex h-9 w-9 flex-col items-center justify-center gap-1.5 sm:hidden"
+      class="flex h-9 w-9 flex-col items-center justify-center gap-1.5 lg:hidden"
     >
       <span class="h-0.5 w-5 rounded-full bg-slate-200 transition-transform"></span>
       <span class="h-0.5 w-5 rounded-full bg-slate-200 transition-opacity"></span>
@@ -45,7 +46,7 @@ const links = [
 
   <ul
     id="mobile-menu"
-    class="hidden flex-col gap-1 border-t border-white/5 bg-bg/95 px-6 pb-4 pt-2 backdrop-blur sm:hidden"
+    class="hidden flex-col gap-1 border-t border-white/5 bg-bg/95 px-6 pb-4 pt-2 backdrop-blur lg:hidden"
   >
     {links.map((link) => (
       <li>
