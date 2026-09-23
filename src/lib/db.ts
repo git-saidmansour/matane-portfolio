@@ -817,7 +817,7 @@ export function seedIfEmpty() {
     bio_2:
       "Je recherche une alternance de 12 mois à partir de septembre 2026, idéalement sur un poste à l'intersection data / cybersécurité / infra. Curieux et autonome, je pratique le CTF (RootMe, 50+ challenges) et le bug bounty (YesWeHack) en continu.",
     location: 'Paris, France',
-    formation: 'F2i, Paris — Master Ingénieur Système Réseaux Cybersécurité',
+    formation: 'IPSSI SQY — Mastère Cybersécurité & Cloud (Alternance)',
     availability: 'Alternance 12 mois (sept. 2026)',
     languages: 'Français (natif), Anglais B1-B2',
     photo_path: '/images/portrait.webp',
